@@ -15,6 +15,9 @@ repositories {
 }
 
 dependencies {
+    implementation("org.projectlombok:lombok:1.18.30")
+    annotationProcessor("org.projectlombok:lombok:1.18.30")
+
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
@@ -22,6 +25,8 @@ dependencies {
 
     implementation("org.jline:jline-terminal-jansi:3.30.0")
     implementation("org.jline:jline-console-ui:3.30.0")
+
+    implementation("com.google.code.gson:gson:2.10.1")
 }
 
 artifacts {

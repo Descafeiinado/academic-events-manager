@@ -6,14 +6,13 @@ import br.edu.ifba.ui.pages.types.NavigationPage;
 import br.edu.ifba.ui.pages.types.StaticPage;
 import br.edu.ifba.views.View;
 import br.edu.ifba.views.ViewRepository;
-import br.edu.ifba.views.impl.forms.EventCreationFormView;
 
 public class MainView extends NavigationPage implements View {
     public static final String NAME = "MAIN";
 
     public MainView() {
-        super("Main Menu"); // Page title
-        // Add static text components that appear above the navigation options
+        super("Main Menu");
+
         addComponent(new TextComponent("Welcome to the Event Management System!"));
         addComponent(new TextComponent("Please choose an option below:"));
     }
@@ -25,22 +24,18 @@ public class MainView extends NavigationPage implements View {
 
     @Override
     public void configureNavigationOptions(InteractionProvider provider) {
-        // Define navigation options for the main menu
-        addNavigationOption("Create New Event", EventCreationFormView.NAME); // Example navigation
-        addNavigationOption("View Events (Static Demo)", "STATIC_DEMO_VIEW"); // Placeholder for another view
-        // addNavigationOption("Manage Participants", "PARTICIPANT_VIEW_NAME_HERE");
-        // addNavigationOption("Generate Reports", "REPORT_VIEW_NAME_HERE");
+        addNavigationOption("Manage Events", "EVENT_MANAGEMENT_VIEW");
+        addNavigationOption("Manage People", "STATIC_DEMO_VIEW");
+        addNavigationOption("Generate Reports", "STATIC_DEMO_VIEW");
 
-        addExitOption(provider); // Adds a standardized exit option
+        addExitOption(provider);
     }
 
-    // The 'display' method is inherited from NavigationPage and will use the configured options.
-
     public static void initialize() {
-        // Register this view with the repository
         ViewRepository.INSTANCE.save(NAME, new MainView());
 
-        // Example of initializing a StaticPage view for the demo link
+        // BOILERPLATE: Create a static demo page
+
         StaticPage demoPage = new StaticPage("Static Demo Page");
 
         demoPage.addText("This is a simple static page.");
@@ -56,9 +51,10 @@ public class MainView extends NavigationPage implements View {
 
             @Override
             public void display(InteractionProvider provider) {
-                demoPage.display(provider); // Delegate to the StaticPage's display logic
+                demoPage.display(provider);
             }
         };
 
-        ViewRepository.INSTANCE.save(staticDemoView.getName(), staticDemoView);    }
+        ViewRepository.INSTANCE.save(staticDemoView.getName(), staticDemoView);
+    }
 }

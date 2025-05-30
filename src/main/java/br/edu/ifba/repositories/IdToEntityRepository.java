@@ -5,11 +5,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public abstract class AbstractIdToEntityRepository<I, T> {
+public class IdToEntityRepository<I, T>  {
 
     protected Map<I, T> data;
 
-    public AbstractIdToEntityRepository() {
+    public IdToEntityRepository() {
         this.data = new HashMap<>();
     }
 

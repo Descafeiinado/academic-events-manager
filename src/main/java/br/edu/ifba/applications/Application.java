@@ -19,18 +19,23 @@ public class Application {
     private static Terminal terminalInstance;
     private static InteractionProvider currentInteractionProvider;
 
+    public static void handleContextSwitch(String viewId) {
+        View view = ViewRepository.INSTANCE.getById(viewId)
+                .orElseThrow(() -> new IllegalStateException("View with ID '" + viewId + "' not found. Ensure it's initialized."));
+
+        handleContextSwitch(view);
+    }
+
     public static void handleContextSwitch(View view) {
         if (currentInteractionProvider == null) {
             System.err.println("Critical Error: InteractionProvider not initialized before context switch!");
-            // This indicates a logical error, as provider should be set by run() or runLegacy()
-            runLegacy(); // Attempt a fallback, or System.exit(1)
-            if (currentInteractionProvider == null) System.exit(1); // Still null, critical failure
+            runLegacy();
+
+            if (currentInteractionProvider == null) System.exit(1);
         }
 
-        // No need to clear screen here, the page's display method should handle it.
-        // currentInteractionProvider.clearScreen();
+        AppConfig.CURRENT_VIEW = view;
 
-        AppConfig.CURRENT_VIEW = view; // If you use this global reference
         view.display(currentInteractionProvider);
     }
 

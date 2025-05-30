@@ -78,6 +78,25 @@ public abstract class NavigationPage extends Page {
         stdoutKeyToAction.put(exitKey, exitAction);
     }
 
+    protected void addBackOption(InteractionProvider provider, String previousViewName) {
+        Runnable backAction = () -> {
+            provider.clearScreen();
+
+            provider.getWriter().println("Going back to the previous menu...");
+            provider.getWriter().flush();
+
+            Application.handleContextSwitch(previousViewName);
+        };
+
+        String backText = "Back";
+        navigationActions.put(backText, backAction);
+
+        String backKey = String.valueOf(stdoutKeyToAction.size() + 1);
+
+        stdoutOptionTextToKey.put(backKey + ". " + backText, backKey);
+        stdoutKeyToAction.put(backKey, backAction);
+    }
+
 
     // Subclasses must call the addNavigationOption/addCustomAction methods within this.
     public abstract void configureNavigationOptions(InteractionProvider provider);
