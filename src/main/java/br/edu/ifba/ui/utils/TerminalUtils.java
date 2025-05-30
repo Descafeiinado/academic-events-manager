@@ -1,4 +1,4 @@
-package br.edu.ifba.utils;
+package br.edu.ifba.ui.utils;
 
 public class TerminalUtils {
     public static void clearTerminal() {

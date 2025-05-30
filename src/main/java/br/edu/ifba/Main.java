@@ -1,20 +1,11 @@
 package br.edu.ifba;
 
-import br.edu.ifba.utils.TerminalUtils;
-import br.edu.ifba.views.View;
-import br.edu.ifba.views.Interactive;
-import br.edu.ifba.views.impl.MainView;
+import br.edu.ifba.applications.Application;
+import br.edu.ifba.views.ViewRepository;
 
-import java.util.List;
-import java.util.Scanner;
+import java.io.IOException;
 
 public class Main {
-    public static View PREVIOUS_VIEW = null;
-    public static View CURRENT_VIEW = new MainView();
-
-    public static List<String> VALID_EXIT_COMMANDS = List.of("exit", "sair", "q", "quit");
-    public static List<String> VALID_BACK_COMMANDS = List.of("back", "voltar", "b", "v");
-
     /*
         O sistema deve permitir:
             1. Cadastro de eventos de diferentes tipos (palestras, cursos, workshops, feiras).
@@ -25,43 +16,39 @@ public class Main {
             6. Relatório de eventos por tipo e data.
      */
 
-    public static void handleContextSwitch(View view, boolean history) {
-        TerminalUtils.clearTerminal();
+    public static void main(String[] args) {
+        ViewRepository.initialize();
 
-        PREVIOUS_VIEW = history ? CURRENT_VIEW : null;
-        CURRENT_VIEW = view;
+        try {
+            System.out.println("Attempting to start in JLine mode...");
+
+            Application.run();
+        } catch (IOException e) {
+            System.err.println("JLine mode failed to start (IOException): " + e.getMessage());
+            System.err.println("Falling back to legacy (Scanner) mode.");
+
+            runLegacy();
+        } catch (NoClassDefFoundError | ExceptionInInitializerError  e) {
+            System.err.println("JLine mode failed to start (JLine library issue): " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            System.err.println("Please ensure JLine library is correctly configured.");
+            System.err.println("Falling back to legacy (Scanner) mode.");
+
+            runLegacy();
+        } catch (Throwable t) {
+            System.err.println("An unexpected error occurred while trying to run in JLine mode: " + t.getMessage());
+            t.printStackTrace();
+            System.err.println("Falling back to legacy (Scanner) mode.");
+
+            runLegacy();
+        }
     }
 
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-
-        while (true) {
-            CURRENT_VIEW.render();
-
-            String input = scanner.nextLine();
-
-            boolean hasPrevious = PREVIOUS_VIEW != null;
-
-            if (!hasPrevious) { // No previous view to go back to
-                boolean isExitCommand = VALID_EXIT_COMMANDS.contains(input.toLowerCase());
-
-                if (isExitCommand) {
-                    System.out.println("Exiting the application...");
-                    break;
-                }
-            }
-
-            if (input.isBlank()) {
-                if (hasPrevious) {
-                    handleContextSwitch(PREVIOUS_VIEW, false);
-                } else { System.out.println("No previous view to go back to."); }
-            }
-
-            if (CURRENT_VIEW instanceof Interactive) {
-                Interactive interactiveView = (Interactive) CURRENT_VIEW;
-
-                interactiveView.handleInput(input);
-            } else { System.out.println("Invalid input. Please try again."); }
+    private static void runLegacy() {
+        try {
+            Application.runLegacy();
+        } catch (Throwable t) {
+            System.err.println("Critical error in legacy (Scanner) mode. Application will exit.");
+            t.printStackTrace();
         }
     }
 }
