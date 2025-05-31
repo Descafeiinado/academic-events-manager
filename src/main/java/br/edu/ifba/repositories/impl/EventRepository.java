@@ -1,8 +1,16 @@
 package br.edu.ifba.repositories.impl;
 
+import br.edu.ifba.GlobalScope;
 import br.edu.ifba.entities.Event;
+import br.edu.ifba.entities.enums.EventType;
+import br.edu.ifba.managers.PersistenceManager;
 import br.edu.ifba.repositories.IdToEntityRepository;
 import br.edu.ifba.repositories.PersistentRepository;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 
 public class EventRepository extends IdToEntityRepository<Long, Event> implements PersistentRepository {
 
@@ -10,11 +18,46 @@ public class EventRepository extends IdToEntityRepository<Long, Event> implement
 
     @Override
     public void load() {
-        // TODO
+        Type jsonArrayType = new TypeToken<JsonArray>() {
+        }.getType();
+
+        JsonArray events = PersistenceManager.INSTANCE.load("events.json", jsonArrayType);
+
+        if (events == null) {
+            return;
+        }
+
+        Long maxId = 0L;
+
+        for (int i = 0; i < events.size(); i++) {
+            JsonObject rawEvent = GlobalScope.GSON.fromJson(events.get(i), JsonObject.class);
+
+            EventType eventType = EventType.fromName(rawEvent.get("type").getAsString());
+            Event event = GlobalScope.GSON.fromJson(rawEvent, eventType.getEventClass());
+
+            System.out.printf("Parsed event: %s%n", event);
+
+            save(event.getId(), event);
+
+            if (event.getId() > maxId)
+                maxId = event.getId();
+        }
+
+        Event.getSequentialIdProvider().setCurrentId(++maxId);
     }
 
     @Override
     public void persist() {
-        // TODO
+        JsonArray jsonArray = new JsonArray();
+
+        for (Event event : getAll()) {
+            jsonArray.add(GlobalScope.GSON.toJsonTree(event, event.getType().getEventClass()));
+        }
+
+        System.out.printf("Saving %d events to JSON...%n", jsonArray.size());
+        System.out.println(jsonArray);
+
+        PersistenceManager.INSTANCE.save("events.json", jsonArray);
     }
+
 }

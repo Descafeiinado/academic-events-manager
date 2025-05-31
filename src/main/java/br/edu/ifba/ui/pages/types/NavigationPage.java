@@ -2,6 +2,7 @@ package br.edu.ifba.ui.pages.types;
 
 import br.edu.ifba.AppConfig;
 import br.edu.ifba.applications.Application;
+import br.edu.ifba.repositories.impl.EventRepository;
 import br.edu.ifba.ui.common.InteractionProvider;
 import br.edu.ifba.ui.components.text.TextComponent;
 import br.edu.ifba.ui.pages.Page;
@@ -60,12 +61,16 @@ public abstract class NavigationPage extends Page {
             provider.clearScreen();
             provider.getWriter().println("Exiting application...");
             provider.getWriter().flush();
+
             if (provider.getNativeProvider() instanceof JLineInteractionProvider) {
                 try {
                     ((JLineInteractionProvider) provider.getNativeProvider()).getTerminal().close();
                 } catch (IOException ignored) {
                 }
             }
+
+            EventRepository.INSTANCE.persist();
+
             System.exit(0);
         };
 

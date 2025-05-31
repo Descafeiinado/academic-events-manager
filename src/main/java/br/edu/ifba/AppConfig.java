@@ -1,14 +1,16 @@
 package br.edu.ifba;
 
+import br.edu.ifba.managers.PersistenceManager;
 import br.edu.ifba.views.View;
 import br.edu.ifba.views.impl.MainView;
 import org.jline.consoleui.prompt.ConsolePrompt;
 import org.jline.utils.OSUtils;
 
 public class AppConfig {
-    public static View CURRENT_VIEW = new MainView();
-
+    public static boolean EXITED_ON_PURPOSE = false;
+    public static boolean DEBUG_MODE = true;
     public static ConsolePrompt.UiConfig UI_CONFIG = generateUiConfig();
+    public static View CURRENT_VIEW = new MainView();
 
     private static ConsolePrompt.UiConfig generateUiConfig() {
         ConsolePrompt.UiConfig config;

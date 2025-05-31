@@ -43,15 +43,15 @@ public class Application {
         try {
             terminalInstance = TerminalBuilder.builder().system(true).nativeSignals(true).build();
 
-            // Graceful exit on Ctrl+C
             terminalInstance.handle(Terminal.Signal.INT, signal -> {
                 System.out.println("\nCtrl+C detected. Exiting application...");
+
+                AppConfig.EXITED_ON_PURPOSE = true;
+
                 try {
-                    if (terminalInstance != null) {
-                        terminalInstance.close();
-                    }
-                } catch (IOException ignored) {
-                }
+                    if (terminalInstance != null) terminalInstance.close();
+                } catch (IOException ignored) {}
+
                 System.exit(0);
             });
 
@@ -59,38 +59,35 @@ public class Application {
                 throw new IllegalStateException("Dumb terminal detected. Current terminal: " + terminalInstance.getType());
             }
 
-            // Consider adding history for LineReader
-            // String historyFile = Paths.get(System.getProperty("user.home"), ".your_app_history").toString();
-            LineReader lineReader = LineReaderBuilder.builder().terminal(terminalInstance)
-                    // .variable(LineReader.HISTORY_FILE, historyFile)
+            LineReader lineReader = LineReaderBuilder.builder()
+                    .terminal(terminalInstance)
                     .build();
 
             currentInteractionProvider = new JLineInteractionProvider(terminalInstance, lineReader);
 
             currentInteractionProvider.getWriter().println("--- JLine Mode Active ---");
             currentInteractionProvider.getWriter().flush();
-            // Consider a brief pause or "Press Enter to continue" if needed
 
             View initialView = ViewRepository.INSTANCE.getById("MAIN").orElseThrow(() -> new IllegalStateException("Main view (MAIN) not found. Ensure it's initialized."));
+
             handleContextSwitch(initialView);
 
         } catch (UserInterruptException e) {
-            // This can happen if Ctrl+C is pressed during LineReader operations outside ConsolePrompt
+            AppConfig.EXITED_ON_PURPOSE = true;
+
             System.out.println("\nOperation interrupted by user. Exiting.");
+
             if (terminalInstance != null) {
                 terminalInstance.close();
             }
         } finally {
+            AppConfig.EXITED_ON_PURPOSE = true;
+
             if (terminalInstance != null) {
                 try {
                     terminalInstance.close();
-                } catch (IOException e) {
-                    System.err.println("Error closing JLine terminal: " + e.getMessage());
-                }
+                } catch (IOException ignored) {}
             }
-
-            System.out.print("\033[H\033[2J");
-            System.out.flush();
 
             System.out.println("Application terminated gracefully.");
         }

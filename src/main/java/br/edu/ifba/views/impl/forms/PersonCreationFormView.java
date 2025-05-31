@@ -23,10 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class EventCreationFormView extends FormPage implements View {
+public class PersonCreationFormView extends FormPage implements View {
     public static final String NAME = "NEW_EVENT_FORM_VIEW";
 
-    public EventCreationFormView() {
+    public PersonCreationFormView() {
         super("Create New Event");
     }
 
@@ -40,10 +40,6 @@ public class EventCreationFormView extends FormPage implements View {
         List<FormField<?>> fields = new ArrayList<>();
 
         fields.add(FormField.text("eventName", "Enter event name", "My Awesome Event"));
-        fields.add(FormField.dateTime("dateTime", "Enter event date and time",
-                LocalDateTime.now().plusDays(7).withHour(10).withMinute(0)
-        ));
-        fields.add(FormField.text("place", "Enter event place", "Online Platform"));
 
         // --- Define conditional fields ---
         Map<String, List<FormField<?>>> eventTypeConditionalChildren = new HashMap<>();
@@ -80,7 +76,33 @@ public class EventCreationFormView extends FormPage implements View {
                 writer.println("Form was cancelled, an error occurred, or no data was entered.");
             }
         } else {
+            writer.println("Received data:");
+
+            results.forEach((key, value) -> {
+                if (!key.equals("confirmCreation")) {
+                    writer.println(String.format("  %s: %s (Type: %s)",
+                            key,
+                            value,
+                            value != null ? value.getClass().getSimpleName() : "null"));
+                }
+            });
+
+            // Example: Accessing conditional data
             EventType selectedEventType = (EventType) results.get("eventType");
+
+            writer.println("Selected Event Type: " + selectedEventType.getLabel());
+
+            List<FormField<?>> specificFields = selectedEventType.getSpecificFieldsFromType();
+
+            writer.println("Specific Fields for " + selectedEventType.getLabel() + ":");
+
+            for (FormField<?> field : specificFields) {
+                Object fieldValue = results.get(field.getName());
+                writer.println(String.format("  %s: %s (Type: %s)",
+                        field.getLabel(),
+                        fieldValue,
+                        fieldValue != null ? fieldValue.getClass().getSimpleName() : "null"));
+            }
 
             try {
                 Event event = createEventInstance(selectedEventType, results);
@@ -161,6 +183,6 @@ public class EventCreationFormView extends FormPage implements View {
     }
 
     public static void initialize() {
-        ViewRepository.INSTANCE.save(NAME, new EventCreationFormView());
+        ViewRepository.INSTANCE.save(NAME, new PersonCreationFormView());
     }
 }

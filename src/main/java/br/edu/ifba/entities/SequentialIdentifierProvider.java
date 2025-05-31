@@ -1,8 +1,10 @@
 package br.edu.ifba.entities;
 
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 public class SequentialIdentifierProvider {
 
     private Long currentId = 0L;
