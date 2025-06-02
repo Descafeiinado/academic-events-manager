@@ -20,12 +20,15 @@ import org.jline.reader.LineReader;
 import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public abstract class FormPage extends Page {
 
@@ -55,59 +58,19 @@ public abstract class FormPage extends Page {
             return;
         }
 
-        Map<String, Object> parsedResults = new HashMap<>();
-
         try {
-            Map<String, ?> rawResults;
-            boolean isJLineProvider = provider.getNativeProvider() instanceof JLineInteractionProvider;
-
-            if (isJLineProvider) {
-                rawResults = gatherJLineInput((JLineInteractionProvider) provider.getNativeProvider(), initialFields);
-            } else if (provider.getNativeProvider() instanceof StdoutInteractionProvider) {
-                rawResults = gatherStdoutInput(provider, initialFields);
-            } else {
-                provider.getWriter().println("Unsupported interaction provider for forms.");
-                onSubmit(provider, Collections.emptyMap());
-                return;
-            }
+            Map<String, ?> rawResults = gatherRawInputs(provider, initialFields);
 
             if (rawResults == null) {
                 onSubmit(provider, Collections.emptyMap());
                 return;
             }
 
-            List<FormField<?>> allPromptedFields = getFormFieldsRecursively(initialFields, rawResults, isJLineProvider);
+            boolean isJLine = isJLineProvider(provider);
+            List<FormField<?>> allPromptedFields = getFormFieldsRecursively(initialFields, rawResults, isJLine);
+            Map<String, Object> parsedResults = parseResults(provider, rawResults, allPromptedFields);
 
-            for (FormField<?> field : allPromptedFields) {
-                Object rawValue = rawResults.get(field.getName());
-                if (rawValue == null) continue;
-
-                String stringValue;
-                if (isJLineProvider) {
-                    PromptResultItemIF item = (PromptResultItemIF) rawValue;
-                    stringValue = extractStringFromJLineResult(item, field);
-                    if (field.getFieldType() == FieldType.BOOLEAN && item instanceof ConfirmResult) {
-                        parsedResults.put(field.getName(), ((ConfirmResult) item).getConfirmed() == ConfirmChoice.ConfirmationValue.YES);
-                        continue;
-                    }
-                } else {
-                    stringValue = (String) rawValue;
-                }
-
-                if (stringValue != null) {
-                    if (field.getParser() != null) {
-                        try {
-                            parsedResults.put(field.getName(), field.getParser().apply(stringValue));
-                        } catch (Exception parseException) {
-                            provider.getWriter().println("Error parsing value for field '" + field.getLabel() + "': \"" + stringValue + "\". Error: " + parseException.getMessage());
-                        }
-                    } else {
-                        parsedResults.put(field.getName(), stringValue);
-                    }
-                }
-            }
             onSubmit(provider, parsedResults);
-
         } catch (UserInterruptException e) {
             provider.getWriter().println("\nForm cancelled by user.");
             onSubmit(provider, Collections.emptyMap());
@@ -120,308 +83,417 @@ public abstract class FormPage extends Page {
         }
     }
 
-    private List<FormField<?>> getFormFieldsRecursively(List<FormField<?>> initialFields, Map<String, ?> rawResults, boolean isJLine) {
-        List<FormField<?>> allEffectivelyPromptedFields = new ArrayList<>();
-        Queue<FormField<?>> fieldsToConsider = new LinkedList<>(initialFields);
-        Set<String> visitedFieldNames = new HashSet<>();
+    private boolean isJLineProvider(InteractionProvider provider) {
+        return provider.getNativeProvider() instanceof JLineInteractionProvider;
+    }
 
-        while(!fieldsToConsider.isEmpty()) {
+    private Map<String, ?> gatherRawInputs(InteractionProvider provider, List<FormField<?>> initialFields)
+            throws IOException, UserInterruptException {
+        Object nativeProvider = provider.getNativeProvider();
+        if (nativeProvider instanceof JLineInteractionProvider jlip) {
+            return gatherJLineInput(jlip, initialFields, this::getFormHeader);
+        }
+        if (nativeProvider instanceof StdoutInteractionProvider) {
+            return gatherStdoutInput(provider, initialFields);
+        }
+        provider.getWriter().println("Unsupported interaction provider for forms.");
+        return null;
+    }
+
+    private Map<String, Object> parseResults(InteractionProvider provider,
+                                             Map<String, ?> rawResults,
+                                             List<FormField<?>> allPromptedFields) {
+        Map<String, Object> parsedResults = new HashMap<>();
+        boolean isJLine = isJLineProvider(provider);
+
+        for (FormField<?> field : allPromptedFields) {
+            Object rawValue = rawResults.get(field.getName());
+            if (rawValue == null) continue;
+
+            String stringValue;
+            if (isJLine) {
+                PromptResultItemIF item = (PromptResultItemIF) rawValue;
+                if (field.getFieldType() == FieldType.BOOLEAN && item instanceof ConfirmResult cr) {
+                    boolean confirmed = cr.getConfirmed() == ConfirmChoice.ConfirmationValue.YES;
+                    parsedResults.put(field.getName(), confirmed);
+                    continue;
+                }
+                stringValue = extractStringFromJLineResult(item);
+            } else {
+                stringValue = (String) rawValue;
+            }
+
+            if (stringValue == null) continue;
+
+            Function<String, ?> parser = field.getParser();
+            if (parser != null) {
+                try {
+                    parsedResults.put(field.getName(), parser.apply(stringValue));
+                } catch (Exception parseException) {
+                    String errorMsg = String.format("Error parsing value for field '%s': \"%s\". Error: %s",
+                            field.getLabel(), stringValue, parseException.getMessage());
+                    provider.getWriter().println(errorMsg);
+                }
+            } else {
+                parsedResults.put(field.getName(), stringValue);
+            }
+        }
+        return parsedResults;
+    }
+
+    private List<FormField<?>> getFormFieldsRecursively(List<FormField<?>> initialFields,
+                                                        Map<String, ?> rawResults,
+                                                        boolean isJLine) {
+        List<FormField<?>> allEffectivelyPromptedFields = new ArrayList<>();
+        Queue<FormField<?>> fieldsToConsider = new LinkedList<>();
+        Set<String> visitedFieldNames = new HashSet<>();
+        Set<String> enqueuedFieldNames = new HashSet<>();
+
+        for (FormField<?> initialField : initialFields) {
+            if (enqueuedFieldNames.add(initialField.getName())) {
+                fieldsToConsider.add(initialField);
+            }
+        }
+
+        while (!fieldsToConsider.isEmpty()) {
             FormField<?> currentField = fieldsToConsider.poll();
+            enqueuedFieldNames.remove(currentField.getName());
+
             if (visitedFieldNames.contains(currentField.getName())) continue;
 
-            if (rawResults.containsKey(currentField.getName())) {
-                allEffectivelyPromptedFields.add(currentField);
-                visitedFieldNames.add(currentField.getName());
+            boolean isPresentInInitialFieldsList = initialFields.stream()
+                    .anyMatch(f -> f.getName().equals(currentField.getName()));
 
-                if (currentField.getFieldType() == FieldType.CHOICE &&
-                        currentField.getConditionalChildren() != null &&
-                        !currentField.getConditionalChildren().isEmpty()) {
-                    Object resultValue = rawResults.get(currentField.getName());
-                    String selectedChoiceKey = isJLine ?
-                            extractStringFromJLineResult((PromptResultItemIF) resultValue, currentField) :
-                            (String) resultValue;
+            if (!rawResults.containsKey(currentField.getName()) && !isPresentInInitialFieldsList) {
+                continue;
+            }
 
-                    if (selectedChoiceKey != null) {
-                        List<FormField<?>> children = currentField.getConditionalChildren().get(selectedChoiceKey);
-                        if (children != null) {
-                            for(FormField<?> child : children){
-                                if(!visitedFieldNames.contains(child.getName())){
-                                    fieldsToConsider.add(child);
-                                }
-                            }
-                        }
-                    }
+            allEffectivelyPromptedFields.add(currentField);
+            visitedFieldNames.add(currentField.getName());
+
+            if (currentField.getFieldType() != FieldType.CHOICE) continue;
+            Map<String, List<FormField<?>>> conditionalChildrenMap = currentField.getConditionalChildren();
+            if (conditionalChildrenMap == null || conditionalChildrenMap.isEmpty()) continue;
+
+            Object resultValue = rawResults.get(currentField.getName());
+            if (resultValue == null) continue;
+
+            String selectedChoiceKey = isJLine ?
+                    extractStringFromJLineResult((PromptResultItemIF) resultValue) :
+                    (String) resultValue;
+            if (selectedChoiceKey == null) continue;
+
+            List<FormField<?>> children = conditionalChildrenMap.get(selectedChoiceKey);
+            if (children == null || children.isEmpty()) continue;
+
+            for (FormField<?> child : children) {
+                if (!visitedFieldNames.contains(child.getName()) &&
+                        enqueuedFieldNames.add(child.getName())) {
+                    fieldsToConsider.add(child);
                 }
             }
         }
         return allEffectivelyPromptedFields;
     }
 
-    private String extractStringFromJLineResult(PromptResultItemIF item, FormField<?> field) {
-        if (item == null) return null;
-        if (item instanceof InputResult) {
-            return ((InputResult) item).getResult();
-        } else if (item instanceof ListResult) {
-            return ((ListResult) item).getSelectedId();
-        } else if (item instanceof ConfirmResult) {
-            ConfirmChoice.ConfirmationValue confirmed = ((ConfirmResult) item).getConfirmed();
-            return (confirmed == ConfirmChoice.ConfirmationValue.YES) ? Boolean.TRUE.toString() : Boolean.FALSE.toString();
-        }
-        return item.getDisplayResult();
+    private String extractStringFromJLineResult(PromptResultItemIF item) {
+        return switch (item) {
+            case null -> null;
+            case InputResult inputResult -> inputResult.getResult();
+            case ListResult listResult -> listResult.getSelectedId();
+            case ConfirmResult cr -> cr.getConfirmed() == ConfirmChoice.ConfirmationValue.YES ?
+                    Boolean.TRUE.toString() : Boolean.FALSE.toString();
+            default -> item.getDisplayResult();
+        };
     }
 
-    private Map<String, PromptResultItemIF> gatherJLineInput(JLineInteractionProvider jlp, List<FormField<?>> initialFields) throws IOException, UserInterruptException {
-        Terminal terminal = jlp.getTerminal();
-        LineReader lineReader = jlp.getLineReader();
+    private Map<String, PromptResultItemIF> gatherJLineInput(
+            JLineInteractionProvider jlp,
+            List<FormField<?>> initialFields,
+            Supplier<List<AttributedString>> headerSupplier) throws IOException, UserInterruptException {
 
         Map<String, PromptResultItemIF> allResults = new HashMap<>();
         Deque<FormField<?>> fieldsToProcess = new LinkedList<>(initialFields);
-        Set<String> processedFieldNamesOutputInAllResults = new HashSet<>();
+        Set<String> processedFieldNames = new HashSet<>();
+        List<AttributedString> dynamicErrorMessages = new ArrayList<>();
 
         while (!fieldsToProcess.isEmpty()) {
-            FormField<?> field = fieldsToProcess.peekFirst();
+            FormField<?> field = fieldsToProcess.pollFirst();
+            if (processedFieldNames.contains(field.getName())) continue;
 
-            if (processedFieldNamesOutputInAllResults.contains(field.getName())) {
-                fieldsToProcess.pollFirst();
-                continue;
-            }
+            PromptResultItemIF resultItem = promptAndValidateJLineField(field, jlp,
+                    dynamicErrorMessages, headerSupplier);
+            allResults.put(field.getName(), resultItem);
+            processedFieldNames.add(field.getName());
 
-            boolean currentFieldValidated = false;
-            PromptResultItemIF resultItemForCurrentField = null;
+            dynamicErrorMessages.clear();
 
-            while(!currentFieldValidated) {
-                ConsolePrompt consolePrompt = new ConsolePrompt(lineReader, terminal, AppConfig.UI_CONFIG);
-                PromptBuilder singleElementPromptBuilder = consolePrompt.getPromptBuilder();
-                PromptableElementIF jlineElement = null;
+            Map<String, List<FormField<?>>> conditionalChildrenMap = field.getConditionalChildren();
+            if (conditionalChildrenMap == null || conditionalChildrenMap.isEmpty()) continue;
 
-                String defaultValueStr = null;
-                if (field.getDefaultValue() != null) {
-                    Object defVal = field.getDefaultValue();
-                    defaultValueStr = switch (defVal) {
-                        case LocalDate localDate when field.getFieldType() == FieldType.DATE ->
-                                GlobalScope.DATE_FORMAT.format(localDate);
-                        case LocalDateTime localDateTime when field.getFieldType() == FieldType.DATETIME ->
-                                GlobalScope.DATE_TIME_FORMAT.format(localDateTime);
-                        case Enum anEnum when field.getFieldType() == FieldType.CHOICE -> anEnum.name();
-                        default -> defVal.toString();
-                    };
-                }
+            String selectedValue = extractStringFromJLineResult(resultItem);
+            if (selectedValue == null) continue;
 
-                String message = field.getLabel();
-                switch (field.getFieldType()) {
-                    case TEXT: case NUMBER:
-                        message += ":";
-                        singleElementPromptBuilder.createInputPrompt()
-                                .name(field.getName())
-                                .message(message)
-                                .defaultValue(defaultValueStr)
-                                .addPrompt(); // Adds the configured prompt to the builder
-                        break;
-                    case CPF:
-                        message += " (format: 000.000.000-00):";
-                        singleElementPromptBuilder.createInputPrompt()
-                                .name(field.getName())
-                                .message(message)
-                                .defaultValue(defaultValueStr)
-                                .addPrompt();
-                        break;
-                    case DATE:
-                        message += " (format: " + GlobalScope.DATE_FORMAT_STRING + "):";
-                        singleElementPromptBuilder.createInputPrompt()
-                                .name(field.getName())
-                                .message(message)
-                                .defaultValue(defaultValueStr)
-                                .addPrompt();
-                        break;
-                    case DATETIME:
-                        message += " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "):";
-                        singleElementPromptBuilder.createInputPrompt()
-                                .name(field.getName())
-                                .message(message)
-                                .defaultValue(defaultValueStr)
-                                .addPrompt();
-                        break;
-                    case CHOICE:
-                        var listPromptConfig = singleElementPromptBuilder.createListPrompt()
-                                .name(field.getName())
-                                .message(field.getLabel() + ":");
-                        field.getOptions().forEach((value, displayText) -> listPromptConfig.newItem(value).text(displayText).add());
-
-                        listPromptConfig.addPrompt();
-                        break;
-                    case BOOLEAN:
-                        singleElementPromptBuilder.createConfirmPromp()
-                                .name(field.getName())
-                                .message(field.getLabel())
-                                .defaultValue(Boolean.TRUE.equals(field.getDefaultValue()) ? ConfirmChoice.ConfirmationValue.YES : ConfirmChoice.ConfirmationValue.NO)
-                                .addPrompt();
-                        break;
-                }
-
-                List<PromptableElementIF> elements = singleElementPromptBuilder.build();
-
-                if (elements == null || elements.isEmpty()) {
-                    throw new IOException("Failed to build JLine prompt element for field: " + field.getName());
-                }
-
-                jlineElement = elements.get(0);
-
-                Map<String, PromptResultItemIF> currentResultMap = consolePrompt.prompt(getFormHeader(), List.of(jlineElement));
-
-                if (currentResultMap == null || currentResultMap.isEmpty()) {
-                    throw new UserInterruptException("User interrupted during JLine prompt for field: " + field.getName());
-                }
-
-                resultItemForCurrentField = currentResultMap.get(field.getName());
-                if (resultItemForCurrentField == null) {
-                    throw new IOException("JLine prompt returned no result for field: " + field.getName());
-                }
-
-                if (field.getFieldType() == FieldType.TEXT || field.getFieldType() == FieldType.NUMBER ||
-                        field.getFieldType() == FieldType.DATE || field.getFieldType() == FieldType.DATETIME) {
-                    String stringValueToValidate = extractStringFromJLineResult(resultItemForCurrentField, field);
-                    if (field.getValidator().test(stringValueToValidate)) {
-                        currentFieldValidated = true;
-                    } else {
-                        terminal.writer().println("Invalid input for '" + field.getLabel() + "'. Please try again.");
-                        terminal.writer().flush();
-                    }
-                } else {
-                    currentFieldValidated = true;
-                }
-            }
-
-            allResults.put(field.getName(), resultItemForCurrentField);
-            processedFieldNamesOutputInAllResults.add(field.getName());
-            fieldsToProcess.pollFirst();
-
-            if (field.getConditionalChildren() != null && !field.getConditionalChildren().isEmpty()) {
-                String selectedStringValue = extractStringFromJLineResult(resultItemForCurrentField, field);
-                if (selectedStringValue != null) {
-                    List<FormField<?>> children = field.getConditionalChildren().get(selectedStringValue);
-                    if (children != null && !children.isEmpty()) {
-                        for (int i = children.size() - 1; i >= 0; i--) {
-                            if (!processedFieldNamesOutputInAllResults.contains(children.get(i).getName())) {
-                                fieldsToProcess.addFirst(children.get(i));
-                            }
-                        }
-                    }
-                }
-            }
+            List<FormField<?>> children = conditionalChildrenMap.get(selectedValue);
+            addConditionalChildrenToQueue(children, fieldsToProcess, processedFieldNames);
         }
         return allResults;
     }
 
-    private Map<String, String> gatherStdoutInput(InteractionProvider provider, List<FormField<?>> initialFields) {
-        PrintWriter writer = provider.getWriter();
-        Map<String, String> resultsContainer = new HashMap<>();
+    private PromptResultItemIF promptAndValidateJLineField(
+            FormField<?> field,
+            JLineInteractionProvider jlp,
+            List<AttributedString> dynamicErrorMessages,
+            Supplier<List<AttributedString>> staticHeaderSupplier) throws IOException, UserInterruptException {
+
+        Terminal terminal = jlp.getTerminal();
+        LineReader lineReader = jlp.getLineReader();
+        PromptResultItemIF resultItem = null;
+        boolean validated = false;
+        EnumSet<FieldType> typesNeedingStrValidation = EnumSet.of(
+                FieldType.TEXT, FieldType.NUMBER, FieldType.CPF, FieldType.DATE, FieldType.DATETIME
+        );
+
+        while (!validated) {
+            ConsolePrompt consolePrompt = new ConsolePrompt(lineReader, terminal, AppConfig.UI_CONFIG);
+            PromptBuilder builder = consolePrompt.getPromptBuilder();
+            PromptableElementIF jlineElement = buildJLinePromptElement(field, builder);
+            if (jlineElement == null) {
+                throw new IOException("Failed to build JLine prompt: " + field.getName());
+            }
+
+            List<AttributedString> currentHeader = new ArrayList<>(staticHeaderSupplier.get());
+            currentHeader.addAll(dynamicErrorMessages);
+
+            Map<String, PromptResultItemIF> resultMap = consolePrompt.prompt(currentHeader, List.of(jlineElement));
+            dynamicErrorMessages.clear();
+
+            if (resultMap == null || resultMap.isEmpty()) {
+                throw new UserInterruptException("User interrupted (JLine): " + field.getName());
+            }
+            resultItem = resultMap.get(field.getName());
+            if (resultItem == null) {
+                throw new IOException("JLine prompt returned no result: " + field.getName());
+            }
+
+            if (!typesNeedingStrValidation.contains(field.getFieldType())) {
+                validated = true;
+            } else {
+                String strValue = extractStringFromJLineResult(resultItem);
+
+                if (field.getValidator().test(strValue)) {
+                    validated = true;
+                } else {
+                    try {
+                        field.getParser().apply(strValue);
+                    } catch (Exception e) {
+                        String error = "Invalid input for '" + field.getLabel() + "': " + e.getMessage();
+
+                        dynamicErrorMessages.add(new AttributedString(error,
+                                AttributedStyle.DEFAULT.foreground(AttributedStyle.RED)));
+                    }
+                }
+            }
+        }
+        return resultItem;
+    }
+
+    private PromptableElementIF buildJLinePromptElement(FormField<?> field, PromptBuilder promptBuilder) {
+        String defaultValueStr = formatDefaultValueForDisplay(field, true);
+        String message = field.getLabel();
+
+        switch (field.getFieldType()) {
+            case TEXT, NUMBER ->
+                    promptBuilder.createInputPrompt().name(field.getName()).message(message + ":")
+                            .defaultValue(defaultValueStr).addPrompt();
+            case CPF ->
+                    promptBuilder.createInputPrompt().name(field.getName())
+                            .message(message + " (format: 000.000.000-00):")
+                            .defaultValue(defaultValueStr).addPrompt();
+            case DATE ->
+                    promptBuilder.createInputPrompt().name(field.getName())
+                            .message(message + " (format: " + GlobalScope.DATE_FORMAT_STRING + "):")
+                            .defaultValue(defaultValueStr).addPrompt();
+            case DATETIME ->
+                    promptBuilder.createInputPrompt().name(field.getName())
+                            .message(message + " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "):")
+                            .defaultValue(defaultValueStr).addPrompt();
+            case CHOICE -> {
+                var listPrompt = promptBuilder.createListPrompt()
+                        .name(field.getName()).message(field.getLabel() + ":");
+                field.getOptions().forEach((value, display) -> listPrompt.newItem(value).text(display).add());
+                listPrompt.addPrompt();
+            }
+            case BOOLEAN -> {
+                ConfirmChoice.ConfirmationValue defaultConfirm =
+                        Boolean.TRUE.toString().equalsIgnoreCase(defaultValueStr) ?
+                                ConfirmChoice.ConfirmationValue.YES : ConfirmChoice.ConfirmationValue.NO;
+                promptBuilder.createConfirmPromp().name(field.getName()).message(field.getLabel())
+                        .defaultValue(defaultConfirm).addPrompt();
+            }
+        }
+        List<PromptableElementIF> elements = promptBuilder.build();
+        return (elements != null && !elements.isEmpty()) ? elements.getFirst() : null;
+    }
+
+    private Map<String, String> gatherStdoutInput(InteractionProvider provider,
+                                                  List<FormField<?>> initialFields) {
+        Map<String, String> results = new HashMap<>();
         Deque<FormField<?>> fieldsToProcess = new LinkedList<>(initialFields);
         Set<String> processedFieldNames = new HashSet<>();
 
         while (!fieldsToProcess.isEmpty()) {
             FormField<?> field = fieldsToProcess.pollFirst();
-
             if (processedFieldNames.contains(field.getName())) continue;
 
-            boolean validInput = false;
-            String selectedStringValue = null;
-
-            while (!validInput) {
-                writer.print(field.getLabel());
-                writer.flush();
-
-                String defaultValueDisplay = "";
-                if (field.getDefaultValue() != null) {
-                    Object defVal = field.getDefaultValue();
-                    defaultValueDisplay = switch (defVal) {
-                        case Enum anEnum when field.getFieldType() == FieldType.CHOICE ->
-                                field.getOptions().getOrDefault(anEnum.name(), defVal.toString());
-                        case Boolean b when field.getFieldType() == FieldType.BOOLEAN ->
-                                field.getOptions().getOrDefault(defVal.toString(), defVal.toString());
-                        case LocalDate localDate when field.getFieldType() == FieldType.DATE ->
-                                GlobalScope.DATE_FORMAT.format(localDate);
-                        case LocalDateTime localDateTime when field.getFieldType() == FieldType.DATETIME ->
-                                GlobalScope.DATE_TIME_FORMAT.format(localDateTime);
-                        default -> defVal.toString();
-                    };
-                    writer.print(" (default: " + defaultValueDisplay + ")");
-                }
-
-                String promptSuffix = "";
-                if (field.getFieldType() == FieldType.CHOICE) {
-                    writer.println();
-                    List<String> optionKeys = new ArrayList<>(field.getOptions().keySet());
-                    for (int i = 0; i < optionKeys.size(); i++) {
-                        writer.printf("  %d. %s%n", i + 1, field.getOptions().get(optionKeys.get(i)));
-                    }
-                    promptSuffix = "Enter choice (number): ";
-                } else if (field.getFieldType() == FieldType.BOOLEAN) {
-                    promptSuffix = " (yes/no): ";
-                } else if (field.getFieldType() == FieldType.DATE) {
-                    promptSuffix = " (format: " + GlobalScope.DATE_FORMAT_STRING + "): ";
-                } else if (field.getFieldType() == FieldType.DATETIME) {
-                    promptSuffix = " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "): ";
-                }
-
-                writer.print(promptSuffix.isEmpty() ? ": " : promptSuffix);
-                writer.flush();
-
-                String rawLine = provider.readLine("").trim();
-
-                if (rawLine.isEmpty() && field.getDefaultValue() != null) {
-                    Object defValObj = field.getDefaultValue();
-                    if (field.getFieldType() == FieldType.CHOICE) {
-                        selectedStringValue = defValObj.toString().toUpperCase();
-                    } else if (field.getFieldType() == FieldType.BOOLEAN) {
-                        selectedStringValue = defValObj.toString();
-                    } else if (field.getFieldType() == FieldType.DATE) {
-                        selectedStringValue = GlobalScope.DATE_FORMAT.format((LocalDate)defValObj);
-                    } else if (field.getFieldType() == FieldType.DATETIME) {
-                        selectedStringValue = GlobalScope.DATE_TIME_FORMAT.format((LocalDateTime)defValObj);
-                    } else {
-                        selectedStringValue = defValObj.toString();
-                    }
-
-                    validInput = field.getValidator().test(selectedStringValue);
-
-                    if (!validInput) writer.println("Warning: Default value (" + selectedStringValue + ") failed validation. Using it anyway.");
-
-                    validInput = true;
-                } else {
-                    if (field.getFieldType() == FieldType.CHOICE) {
-                        try {
-                            int choiceIndex = Integer.parseInt(rawLine) - 1;
-                            List<String> optionKeys = new ArrayList<>(field.getOptions().keySet());
-                            if (choiceIndex >= 0 && choiceIndex < optionKeys.size()) {
-                                selectedStringValue = optionKeys.get(choiceIndex);
-                            } else {
-                                writer.println("Invalid choice number."); continue;
-                            }
-                        } catch (NumberFormatException e) {
-                            writer.println("Please enter a number for your choice."); continue;
-                        }
-                    } else {
-                        selectedStringValue = rawLine;
-                    }
-                    validInput = field.getValidator().test(selectedStringValue);
-                    if (!validInput) writer.println("Invalid input. Please try again.");
-                }
-            }
-
-            resultsContainer.put(field.getName(), selectedStringValue);
+            String value = promptAndValidateStdoutField(field, provider);
+            results.put(field.getName(), value);
             processedFieldNames.add(field.getName());
 
-            if (field.getConditionalChildren() != null && !field.getConditionalChildren().isEmpty()) {
-                List<FormField<?>> children = field.getConditionalChildren().get(selectedStringValue);
-                if (children != null && !children.isEmpty()) {
-                    for (int i = children.size() - 1; i >= 0; i--) {
-                        if (!processedFieldNames.contains(children.get(i).getName())) {
-                            fieldsToProcess.addFirst(children.get(i));
-                        }
-                    }
+            Map<String, List<FormField<?>>> conditionalChildrenMap = field.getConditionalChildren();
+            if (conditionalChildrenMap == null || conditionalChildrenMap.isEmpty()) continue;
+
+            List<FormField<?>> children = conditionalChildrenMap.get(value);
+            addConditionalChildrenToQueue(children, fieldsToProcess, processedFieldNames);
+        }
+        return results;
+    }
+
+    private String promptAndValidateStdoutField(FormField<?> field, InteractionProvider provider) {
+        PrintWriter writer = provider.getWriter();
+        String inputValue = null;
+        boolean validInput = false;
+
+        while (!validInput) {
+            writer.print(field.getLabel());
+
+            String defaultValueDisplay = formatDefaultValueForDisplay(field, false);
+
+            if (defaultValueDisplay != null && !defaultValueDisplay.isEmpty()) {
+                writer.print(" (default: " + defaultValueDisplay + ")");
+            }
+
+            writer.print(getStdoutPromptSuffix(field, writer));
+            writer.flush();
+
+            String rawLine = provider.readLine("").trim();
+
+            if (rawLine.isEmpty() && field.getDefaultValue() != null) {
+                inputValue = getDefaultValueAsString(field);
+                validInput = field.getValidator().test(inputValue);
+
+                if (!validInput) {
+                    writer.println("Warning: Default value (" + inputValue + ") for '" +
+                            field.getLabel() + "' is invalid, but used anyway.");
+                    validInput = true;
+                }
+            } else {
+                String processed = processStdoutRawInput(field, rawLine, writer);
+
+                if (processed == null) continue;
+
+                inputValue = processed;
+                validInput = field.getValidator().test(inputValue);
+
+                if (!validInput) {
+                    writer.println("Invalid input for '" + field.getLabel() + "'. Please try again.");
                 }
             }
         }
-        return resultsContainer;
+        return inputValue;
+    }
+
+    private String getStdoutPromptSuffix(FormField<?> field, PrintWriter writer) {
+        return switch (field.getFieldType()) {
+            case CHOICE -> {
+                writer.println();
+
+                List<String> keys = new ArrayList<>(field.getOptions().keySet());
+
+                for (int i = 0; i < keys.size(); i++) {
+                    writer.printf("  %d. %s%n", i + 1, field.getOptions().get(keys.get(i)));
+                }
+
+                yield "Enter choice (number): ";
+            }
+            case BOOLEAN -> " (yes/no): ";
+            case DATE -> " (format: " + GlobalScope.DATE_FORMAT_STRING + "): ";
+            case DATETIME -> " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "): ";
+            case CPF -> " (format: 000.000.000-00): ";
+            default -> ": ";
+        };
+    }
+
+    private String processStdoutRawInput(FormField<?> field, String rawLine, PrintWriter writer) {
+        return switch (field.getFieldType()) {
+            case CHOICE -> {
+                try {
+                    int choiceIdx = Integer.parseInt(rawLine) - 1;
+                    List<String> keys = new ArrayList<>(field.getOptions().keySet());
+                    if (choiceIdx >= 0 && choiceIdx < keys.size()) yield keys.get(choiceIdx);
+
+                    writer.println("Invalid choice number. Please try again.");
+                    yield null;
+                } catch (NumberFormatException e) {
+                    writer.println("Please enter a number for your choice. Please try again.");
+                    yield null;
+                }
+            }
+            case BOOLEAN -> {
+                if ("yes".equalsIgnoreCase(rawLine) || "y".equalsIgnoreCase(rawLine)) yield Boolean.TRUE.toString();
+                if ("no".equalsIgnoreCase(rawLine) || "n".equalsIgnoreCase(rawLine)) yield Boolean.FALSE.toString();
+                yield rawLine;
+            }
+            default -> rawLine;
+        };
+    }
+
+    private String getDefaultValueAsString(FormField<?> field) {
+        Object defVal = field.getDefaultValue();
+        if (defVal == null) return null;
+
+        return switch (defVal) {
+            case Enum<?> enumVal when field.getFieldType() == FieldType.CHOICE -> enumVal.name();
+            case LocalDate ld when field.getFieldType() == FieldType.DATE -> GlobalScope.DATE_FORMAT.format(ld);
+            case LocalDateTime ldt when field.getFieldType() == FieldType.DATETIME ->
+                    GlobalScope.DATE_TIME_FORMAT.format(ldt);
+            default -> defVal.toString();
+        };
+    }
+
+    private String formatDefaultValueForDisplay(FormField<?> field, boolean isJLineContext) {
+        Object defVal = field.getDefaultValue();
+
+        if (defVal == null) return null;
+
+        return switch (defVal) {
+            case LocalDate ld -> GlobalScope.DATE_FORMAT.format(ld);
+            case LocalDateTime ldt -> GlobalScope.DATE_TIME_FORMAT.format(ldt);
+            case Enum<?> enumVal when field.getFieldType() == FieldType.CHOICE ->
+                    isJLineContext ? enumVal.name() : field.getOptions().getOrDefault(enumVal.name(), enumVal.toString());
+            case Boolean bVal when field.getFieldType() == FieldType.BOOLEAN -> {
+                if (isJLineContext) yield bVal.toString();
+
+                Map<String, String> options = field.getOptions();
+                if (options != null) yield options.getOrDefault(bVal.toString(), bVal ? "yes" : "no");
+                yield bVal ? "yes" : "no";
+            }
+            default -> defVal.toString();
+        };
+    }
+
+    private void addConditionalChildrenToQueue(List<FormField<?>> children,
+                                               Deque<FormField<?>> fieldsToProcess,
+                                               Set<String> processedFieldNames) {
+        if (children == null || children.isEmpty()) return;
+
+        for (int i = children.size() - 1; i >= 0; i--) {
+            FormField<?> child = children.get(i);
+
+            if (!processedFieldNames.contains(child.getName()) &&
+                    !fieldsToProcess.contains(child)) {
+                fieldsToProcess.addFirst(child);
+            }
+        }
     }
 }

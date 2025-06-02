@@ -4,7 +4,6 @@ import br.edu.ifba.entities.enums.EventModality;
 import br.edu.ifba.entities.enums.EventType;
 import br.edu.ifba.ui.components.form.FormField;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;

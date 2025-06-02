@@ -18,14 +18,10 @@ public class EventRepository extends IdToEntityRepository<Long, Event> implement
 
     @Override
     public void load() {
-        Type jsonArrayType = new TypeToken<JsonArray>() {
-        }.getType();
+        Type jsonArrayType = new TypeToken<JsonArray>(){}.getType();
+        JsonArray events = PersistenceManager.INSTANCE.load(getFileName(), jsonArrayType);
 
-        JsonArray events = PersistenceManager.INSTANCE.load("events.json", jsonArrayType);
-
-        if (events == null) {
-            return;
-        }
+        if (events == null) return;
 
         Long maxId = 0L;
 
@@ -57,7 +53,7 @@ public class EventRepository extends IdToEntityRepository<Long, Event> implement
         System.out.printf("Saving %d events to JSON...%n", jsonArray.size());
         System.out.println(jsonArray);
 
-        PersistenceManager.INSTANCE.save("events.json", jsonArray);
+        PersistenceManager.INSTANCE.save(getFileName(), jsonArray);
     }
 
 }

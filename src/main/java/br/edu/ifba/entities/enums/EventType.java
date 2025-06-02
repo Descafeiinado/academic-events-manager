@@ -38,6 +38,11 @@ public enum EventType {
         }
     }
 
+    @Override
+    public String toString() {
+        return label;
+    }
+
     public static EventType fromLabel(String label) {
         return Arrays.stream(EventType.values())
                 .filter(eventType -> eventType.getLabel().equalsIgnoreCase(label))

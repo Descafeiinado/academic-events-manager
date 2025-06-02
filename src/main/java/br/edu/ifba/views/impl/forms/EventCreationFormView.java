@@ -152,7 +152,6 @@ public class EventCreationFormView extends FormPage implements View {
                         .capacity((Integer) results.get("capacity"))
                         .description((String) results.get("description"))
                         .build();
-
             };
 
         } catch (Exception e) {

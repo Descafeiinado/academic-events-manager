@@ -3,6 +3,7 @@ package br.edu.ifba;
 import br.edu.ifba.applications.Application;
 import br.edu.ifba.managers.PersistenceManager;
 import br.edu.ifba.repositories.impl.EventRepository;
+import br.edu.ifba.repositories.impl.PersonRepository;
 import br.edu.ifba.views.ViewRepository;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ public class Main {
 
     public static void main(String[] args) {
         EventRepository.INSTANCE.load();
+        PersonRepository.INSTANCE.load();
 
         ViewRepository.initialize();
 
@@ -53,7 +55,7 @@ public class Main {
             runLegacy();
         }
 
-        EventRepository.INSTANCE.persist();
+        Application.finishGracefully();
     }
 
     private static void runLegacy() {

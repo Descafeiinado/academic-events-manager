@@ -24,8 +24,8 @@ public class MainView extends NavigationPage implements View {
 
     @Override
     public void configureNavigationOptions(InteractionProvider provider) {
-        addNavigationOption("Manage Events", "EVENT_MANAGEMENT_VIEW");
-        addNavigationOption("Manage People", "STATIC_DEMO_VIEW");
+        addNavigationOption("Manage Events", EventManagementView.NAME);
+        addNavigationOption("Manage People", PeopleManagementView.NAME);
         addNavigationOption("Generate Reports", "STATIC_DEMO_VIEW");
 
         addExitOption(provider);

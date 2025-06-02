@@ -1,14 +1,21 @@
 package br.edu.ifba.views.impl.forms;
 
+import br.edu.ifba.GlobalScope;
 import br.edu.ifba.applications.Application;
 import br.edu.ifba.entities.Event;
+import br.edu.ifba.entities.Person;
 import br.edu.ifba.entities.enums.EventModality;
 import br.edu.ifba.entities.enums.EventType;
+import br.edu.ifba.entities.enums.PersonType;
 import br.edu.ifba.entities.events.Course;
 import br.edu.ifba.entities.events.Fair;
 import br.edu.ifba.entities.events.Lecture;
 import br.edu.ifba.entities.events.Workshop;
+import br.edu.ifba.entities.personas.External;
+import br.edu.ifba.entities.personas.Student;
+import br.edu.ifba.entities.personas.Teacher;
 import br.edu.ifba.repositories.impl.EventRepository;
+import br.edu.ifba.repositories.impl.PersonRepository;
 import br.edu.ifba.ui.common.InteractionProvider;
 import br.edu.ifba.ui.components.form.FormField;
 import br.edu.ifba.ui.pages.types.FormPage;
@@ -17,6 +24,7 @@ import br.edu.ifba.views.ViewRepository;
 import br.edu.ifba.views.impl.MainView;
 
 import java.io.PrintWriter;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,10 +32,10 @@ import java.util.List;
 import java.util.Map;
 
 public class PersonCreationFormView extends FormPage implements View {
-    public static final String NAME = "NEW_EVENT_FORM_VIEW";
+    public static final String NAME = "NEW_PERSON_FORM_VIEW";
 
     public PersonCreationFormView() {
-        super("Create New Event");
+        super("Create New Person");
     }
 
     @Override
@@ -39,27 +47,17 @@ public class PersonCreationFormView extends FormPage implements View {
     protected List<FormField<?>> getFormFields() {
         List<FormField<?>> fields = new ArrayList<>();
 
-        fields.add(FormField.text("eventName", "Enter event name", "My Awesome Event"));
+        fields.add(FormField.cpf("cpf", "Enter Person's CPF", null));
+        fields.add(FormField.text("name", "Enter Person's Name", "John Doe"));
+        fields.add(FormField.date("birthDate", "Enter Person's Birth Date",
+                LocalDateTime.now().minusYears(20).toLocalDate()
+        ));
 
-        // --- Define conditional fields ---
-        Map<String, List<FormField<?>>> eventTypeConditionalChildren = new HashMap<>();
-
-        for (EventType eventType : EventType.values()) {
-            eventTypeConditionalChildren.put(eventType.name(), eventType.getSpecificFieldsFromType());
-        }
-
-        fields.add(FormField.choice("eventType", "Select event type",
-            EventType.LECTURE, EventType.class, EventType::getLabel,
-            eventTypeConditionalChildren)
+        fields.add(FormField.choice("category", "Select Person's Category",
+                PersonType.EXTERNAL, PersonType.class, PersonType::getLabel)
         );
 
-        fields.add(FormField.choice("modality", "Select event modality",
-            EventModality.VIRTUAL, EventModality.class, EventModality::getLabel)
-        );
-
-        fields.add(FormField.integer("capacity", "Enter event capacity (overall)", 50));
-        fields.add(FormField.freeText("description", "Enter event description (optional)", ""));
-        fields.add(FormField.confirmation("confirmCreation", "Are you sure you want to create this event?", true));
+        fields.add(FormField.confirmation("confirmCreation", "Are you sure you want to create this person?", true));
 
         return fields;
     }
@@ -71,7 +69,7 @@ public class PersonCreationFormView extends FormPage implements View {
 
         if (results == null || results.isEmpty() || !Boolean.TRUE.equals(results.get("confirmCreation"))) {
             if (results != null && !results.isEmpty() && !Boolean.TRUE.equals(results.get("confirmCreation"))) {
-                writer.println("Event creation cancelled by user.");
+                writer.println("Person creation cancelled by user.");
             } else {
                 writer.println("Form was cancelled, an error occurred, or no data was entered.");
             }
@@ -87,34 +85,18 @@ public class PersonCreationFormView extends FormPage implements View {
                 }
             });
 
-            // Example: Accessing conditional data
-            EventType selectedEventType = (EventType) results.get("eventType");
-
-            writer.println("Selected Event Type: " + selectedEventType.getLabel());
-
-            List<FormField<?>> specificFields = selectedEventType.getSpecificFieldsFromType();
-
-            writer.println("Specific Fields for " + selectedEventType.getLabel() + ":");
-
-            for (FormField<?> field : specificFields) {
-                Object fieldValue = results.get(field.getName());
-                writer.println(String.format("  %s: %s (Type: %s)",
-                        field.getLabel(),
-                        fieldValue,
-                        fieldValue != null ? fieldValue.getClass().getSimpleName() : "null"));
-            }
+            PersonType selectedPersonType = (PersonType) results.get("category");
 
             try {
-                Event event = createEventInstance(selectedEventType, results);
+                Person person = createPersonInstance(selectedPersonType, results);
 
-                EventRepository.INSTANCE.save(event.getId(), event);
-                EventRepository.INSTANCE.persist();
+                PersonRepository.INSTANCE.save(person.getCpf(), person);
+                PersonRepository.INSTANCE.persist();
 
-                writer.println(String.format("\nEvent #%d '%s' (%s) created successfully!", event.getId(), event.getTitle(), event.getType().getLabel()));
+                writer.println(String.format("\nPerson '%s' with CPF %s created successfully!",
+                        person.getName(), GlobalScope.CPF_FORMATTER.apply(person.getCpf())));
             } catch (Exception e) {
-                Event.getSequentialIdProvider().rollback();
-
-                writer.println("Error creating event instance: " + e.getMessage());
+                writer.println("Error saving person: " + e.getMessage());
 
                 e.printStackTrace(writer);
             }
@@ -125,60 +107,34 @@ public class PersonCreationFormView extends FormPage implements View {
         ViewRepository.INSTANCE.getById(MainView.NAME).ifPresent(Application::handleContextSwitch);
     }
 
-    protected Event createEventInstance(EventType eventType, Map<String, Object> results) {
+    protected Person createPersonInstance(PersonType personType, Map<String, Object> results) {
         try {
-            if (eventType == null) {
-                throw new IllegalArgumentException("Event type cannot be null");
+            if (personType == null) {
+                throw new IllegalArgumentException("Person type cannot be null");
             }
 
-            return switch (eventType) {
-                case COURSE -> Course.builder()
-                        .title((String) results.get("eventName"))
-                        .date((LocalDateTime) results.get("dateTime"))
-                        .place((String) results.get("place"))
-                        .type(eventType)
-                        .modality((EventModality) results.get("modality"))
-                        .capacity((Integer) results.get("capacity"))
-                        .description((String) results.get("description"))
-                        .duration((Integer) results.get("duration"))
-                        .instructor((String) results.get("instructor"))
+            return switch (personType) {
+                case EXTERNAL -> External.builder()
+                        .cpf((String) results.get("cpf"))
+                        .name((String) results.get("name"))
+                        .birthDate((LocalDate) results.get("birthDate"))
+                        .type(personType)
                         .build();
-                case LECTURE -> Lecture.builder()
-                        .title((String) results.get("eventName"))
-                        .date((LocalDateTime) results.get("dateTime"))
-                        .place((String) results.get("place"))
-                        .type(eventType)
-                        .modality((EventModality) results.get("modality"))
-                        .capacity((Integer) results.get("capacity"))
-                        .description((String) results.get("description"))
-                        .speaker((String) results.get("speaker"))
-                        .topic((String) results.get("topic"))
+                case STUDENT -> Student.builder()
+                        .cpf((String) results.get("cpf"))
+                        .name((String) results.get("name"))
+                        .birthDate((LocalDate) results.get("birthDate"))
+                        .type(personType)
                         .build();
-                case WORKSHOP -> Workshop.builder()
-                        .title((String) results.get("eventName"))
-                        .date((LocalDateTime) results.get("dateTime"))
-                        .place((String) results.get("place"))
-                        .type(eventType)
-                        .modality((EventModality) results.get("modality"))
-                        .capacity((Integer) results.get("capacity"))
-                        .description((String) results.get("description"))
-                        .materialsProvided((Boolean) results.get("materialsProvided"))
-                        .numberOfSessions((Integer) results.get("numberOfSessions"))
+                case TEACHER -> Teacher.builder()
+                        .cpf((String) results.get("cpf"))
+                        .name((String) results.get("name"))
+                        .birthDate((LocalDate) results.get("birthDate"))
+                        .type(personType)
                         .build();
-                case FAIR -> Fair.builder()
-                        .title((String) results.get("eventName"))
-                        .date((LocalDateTime) results.get("dateTime"))
-                        .place((String) results.get("place"))
-                        .type(eventType)
-                        .modality((EventModality) results.get("modality"))
-                        .capacity((Integer) results.get("capacity"))
-                        .description((String) results.get("description"))
-                        .build();
-
             };
-
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create event instance for type: " + eventType, e);
+            throw new RuntimeException("Failed to create person instance for type: " + personType, e);
         }
     }
 

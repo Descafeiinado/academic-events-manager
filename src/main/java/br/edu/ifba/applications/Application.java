@@ -1,6 +1,8 @@
 package br.edu.ifba.applications;
 
 import br.edu.ifba.AppConfig;
+import br.edu.ifba.repositories.impl.EventRepository;
+import br.edu.ifba.repositories.impl.PersonRepository;
 import br.edu.ifba.ui.common.InteractionProvider;
 import br.edu.ifba.ui.providers.JLineInteractionProvider;
 import br.edu.ifba.ui.providers.StdoutInteractionProvider;
@@ -13,11 +15,16 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class Application {
 
     private static Terminal terminalInstance;
     private static InteractionProvider currentInteractionProvider;
+    private static final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(
+            Runtime.getRuntime().availableProcessors() + 1
+    );
 
     public static void handleContextSwitch(String viewId) {
         View view = ViewRepository.INSTANCE.getById(viewId)
@@ -39,20 +46,30 @@ public class Application {
         view.display(currentInteractionProvider);
     }
 
+    public static void finishGracefully() {
+        PersonRepository.INSTANCE.persist();
+        EventRepository.INSTANCE.persist();
+    }
+
     public static void run() throws IOException {
         try {
             terminalInstance = TerminalBuilder.builder().system(true).nativeSignals(true).build();
 
             terminalInstance.handle(Terminal.Signal.INT, signal -> {
-                System.out.println("\nCtrl+C detected. Exiting application...");
+                System.out.println("\nCtrl+C detected. Exiting application in 1 second...");
 
                 AppConfig.EXITED_ON_PURPOSE = true;
 
-                try {
-                    if (terminalInstance != null) terminalInstance.close();
-                } catch (IOException ignored) {}
+                finishGracefully();
 
-                System.exit(0);
+                try {
+                    executorService.schedule(() -> {
+                        System.exit(0);
+                    }, 1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+                    if (terminalInstance != null) terminalInstance.close();
+                } catch (IOException ignored) {
+                }
             });
 
             if (terminalInstance.getType().equals(Terminal.TYPE_DUMB) || terminalInstance.getType().equals(Terminal.TYPE_DUMB_COLOR)) {
@@ -86,7 +103,8 @@ public class Application {
             if (terminalInstance != null) {
                 try {
                     terminalInstance.close();
-                } catch (IOException ignored) {}
+                } catch (IOException ignored) {
+                }
             }
 
             System.out.println("Application terminated gracefully.");

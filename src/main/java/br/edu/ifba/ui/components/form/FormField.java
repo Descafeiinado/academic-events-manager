@@ -1,6 +1,8 @@
 package br.edu.ifba.ui.components.form;
 
 import br.edu.ifba.GlobalScope;
+import br.edu.ifba.entities.Person;
+import br.edu.ifba.repositories.impl.PersonRepository;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -12,6 +14,25 @@ import java.util.function.Predicate;
 
 @Getter
 public class FormField<T> {
+    public static Function<String, String> DEFAULT_CPF_PARSER = cpf -> {
+        if (cpf == null || cpf.isBlank()) return null;
+
+        String cleaned = cpf.replaceAll("[^0-9]", "");
+
+        if (cleaned.length() != 11) throw new IllegalArgumentException("Invalid CPF length");
+        if (!cleaned.matches("\\d{11}")) throw new IllegalArgumentException("Invalid CPF format");
+
+        return cleaned;
+    };
+
+    public static Predicate<String> DEFAULT_CPF_VALIDATOR = cpf -> {
+        if (cpf == null || cpf.isBlank()) return false;
+
+        String cleaned = cpf.replaceAll("[^0-9]", "");
+
+        return cleaned.length() == 11 && cleaned.matches("\\d{11}");
+    };
+
     private final String name;
     private final String label;
     private final T defaultValue;
@@ -53,22 +74,63 @@ public class FormField<T> {
 
     public static FormField<String> cpf(String name, String label, String defaultValue) {
         return new FormField<>(name, label, defaultValue,
-                s -> {
-                    if (s == null || s.isBlank()) return null;
+                DEFAULT_CPF_PARSER,
+                DEFAULT_CPF_VALIDATOR,
+                FieldType.CPF, Collections.emptyMap(), Collections.emptyMap()
+        );
+    }
 
-                    String cleaned = s.replaceAll("[^0-9]", "");
+    public static FormField<String> person(String name, String label) {
+        return person(name, label, null);
+    }
 
-                    if (cleaned.length() != 11) throw new IllegalArgumentException("Invalid CPF length");
-                    if (!cleaned.matches("\\d{11}")) throw new IllegalArgumentException("Invalid CPF format");
+    public static FormField<String> person(String name, String label, Function<Person, Boolean> personValidator) {
+        return new FormField<>(name, label, null,
+                cpf -> {
+                    if (cpf == null || cpf.isBlank()) return null;
+
+                    String cleaned = DEFAULT_CPF_PARSER.apply(cpf);
+
+                    PersonRepository personRepository = PersonRepository.INSTANCE;
+                    Optional<Person> person = personRepository.getById(cleaned);
+
+                    if (person.isEmpty()) {
+                        throw new IllegalArgumentException("Person not found for CPF: " + cleaned);
+                    }
+
+                    if (personValidator != null) {
+                        try {
+                            personValidator.apply(person.get());
+                        } catch (Exception e) {
+                            throw new IllegalArgumentException(e.getMessage());
+                        }
+                    }
 
                     return cleaned;
                 },
-                s -> {
-                    String cleaned = s.replaceAll("[^0-9]", "");
+                cpf -> {
+                    if (cpf == null || cpf.isBlank() || !DEFAULT_CPF_VALIDATOR.test(cpf)) return false;
 
-                    return cleaned.length() == 11 && cleaned.matches("\\d{11}");
+                    PersonRepository personRepository = PersonRepository.INSTANCE;
+                    Optional<Person> person = personRepository.getById(cpf);
+
+                    if (personValidator == null) {
+                        return person.isPresent();
+                    }
+
+                    if (person.isEmpty()) {
+                        return false;
+                    }
+
+                    try {
+                        return personValidator.apply(person.get());
+                    } catch (Exception e) {
+                        return false;
+                    }
                 },
-                FieldType.CPF, Collections.emptyMap(), Collections.emptyMap()
+                FieldType.CPF,
+                Collections.emptyMap(),
+                Collections.emptyMap()
         );
     }
 
@@ -79,10 +141,14 @@ public class FormField<T> {
     public static FormField<LocalDate> date(String name, String label, LocalDate defaultValue) {
         return new FormField<>(
                 name, label, defaultValue,
-                s -> LocalDate.parse(s, GlobalScope.DATE_FORMAT), // Parser expects GlobalScope format
-                s -> { // Validator
-                    try { LocalDate.parse(s, GlobalScope.DATE_FORMAT); return true; }
-                    catch (DateTimeParseException e) { return false; }
+                s -> LocalDate.parse(s, GlobalScope.DATE_FORMAT),
+                s -> {
+                    try {
+                        LocalDate.parse(s, GlobalScope.DATE_FORMAT);
+                        return true;
+                    } catch (DateTimeParseException e) {
+                        return false;
+                    }
                 },
                 FieldType.DATE, Collections.emptyMap(), Collections.emptyMap()
         );
@@ -93,8 +159,12 @@ public class FormField<T> {
                 name, label, defaultValue,
                 s -> LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT), // Parser expects GlobalScope format
                 s -> { // Validator
-                    try { LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT); return true; }
-                    catch (DateTimeParseException e) { return false; }
+                    try {
+                        LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT);
+                        return true;
+                    } catch (DateTimeParseException e) {
+                        return false;
+                    }
                 },
                 FieldType.DATETIME, Collections.emptyMap(), Collections.emptyMap()
         );

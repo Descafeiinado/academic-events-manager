@@ -3,7 +3,9 @@ package br.edu.ifba.views;
 import br.edu.ifba.repositories.IdToEntityRepository;
 import br.edu.ifba.views.impl.EventManagementView;
 import br.edu.ifba.views.impl.MainView;
+import br.edu.ifba.views.impl.PeopleManagementView;
 import br.edu.ifba.views.impl.forms.EventCreationFormView;
+import br.edu.ifba.views.impl.forms.PersonCreationFormView;
 
 public class ViewRepository extends IdToEntityRepository<String, View> {
     public static ViewRepository INSTANCE = new ViewRepository();
@@ -12,6 +14,9 @@ public class ViewRepository extends IdToEntityRepository<String, View> {
         MainView.initialize();
         EventManagementView.initialize();
         EventCreationFormView.initialize();
+
+        PeopleManagementView.initialize();
+        PersonCreationFormView.initialize();
     }
 
 }

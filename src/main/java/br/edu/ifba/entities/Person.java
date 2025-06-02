@@ -1,36 +1,26 @@
 package br.edu.ifba.entities;
 
+import br.edu.ifba.entities.enums.PersonType;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
+@NoArgsConstructor
 @SuperBuilder
 public abstract class Person {
 
-    private static final SequentialIdentifierProvider SEQUENTIAL_ID_PROVIDER = new SequentialIdentifierProvider();
-
-    private final Long id = SEQUENTIAL_ID_PROVIDER.getNextId();
-
     private String cpf;
     private String name;
-    private LocalDateTime birthday;
+    private LocalDate birthDate;
 
-    private List<Long> eventsParticipated = new ArrayList<>();
+    private PersonType type;
 
-    public Person() {
-        SEQUENTIAL_ID_PROVIDER.rollback();
-    }
-
-    /*
-        Static Methods
-     */
-
-    public static SequentialIdentifierProvider getSequentialIdProvider() {
-        return SEQUENTIAL_ID_PROVIDER;
-    }
+    private final List<Long> eventsParticipated = new ArrayList<>();
 
 }

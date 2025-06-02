@@ -14,6 +14,6 @@ import java.util.List;
 @SuperBuilder
 public class External extends Person {
 
-    private List<Long> lecturesPresented;
+    private List<Long> lecturesPresented = List.of();
 
 }

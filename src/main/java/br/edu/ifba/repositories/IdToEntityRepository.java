@@ -14,7 +14,7 @@ public class IdToEntityRepository<I, T>  {
     }
 
     public Optional<T> getById(I id) {
-        return Optional.of(data.get(id));
+        return Optional.ofNullable(data.get(id));
     }
 
     public boolean exists(I id) {

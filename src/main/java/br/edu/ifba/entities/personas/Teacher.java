@@ -14,6 +14,6 @@ import java.util.List;
 @SuperBuilder
 public class Teacher extends Person {
 
-    private List<Long> coursesTaught;
+    private List<Long> coursesTaught = List.of();
 
 }

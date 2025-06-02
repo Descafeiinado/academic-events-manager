@@ -21,7 +21,7 @@ public class Lecture extends Event {
     @Override
     public List<FormField<?>> getSpecificFields() {
         return List.of(
-            FormField.cpf("speaker", "Speaker's Name", null),
+            FormField.person("speaker", "Speaker's Name"),
             FormField.text("topic", "Lecture Topic", null)
         );
     }
