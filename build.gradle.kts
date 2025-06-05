@@ -57,8 +57,7 @@ tasks {
         mergeServiceFiles()
 
         manifest {
-//            attributes["Main-Class"] = "br.edu.ifba.JLineTest"
-            attributes["Main-Class"] = "br.edu.ifba.Main"
+            attributes["Main-Class"] = "br.edu.ifba.aem.bootstrap.Main"
         }
     }
 
