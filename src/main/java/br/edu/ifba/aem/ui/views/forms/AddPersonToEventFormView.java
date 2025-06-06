@@ -3,25 +3,19 @@ package br.edu.ifba.aem.ui.views.forms;
 import br.edu.ifba.aem.application.AppConfig;
 import br.edu.ifba.aem.application.Application;
 import br.edu.ifba.aem.domain.entities.Event;
-import br.edu.ifba.aem.domain.entities.events.Course;
-import br.edu.ifba.aem.domain.entities.events.Fair;
-import br.edu.ifba.aem.domain.entities.events.Lecture;
-import br.edu.ifba.aem.domain.entities.events.Workshop;
 import br.edu.ifba.aem.domain.enums.EventModality;
-import br.edu.ifba.aem.domain.enums.EventType;
 import br.edu.ifba.aem.infrastructure.repositories.impl.EventRepository;
-import br.edu.ifba.aem.infrastructure.service.ParticipationService;
+import br.edu.ifba.aem.infrastructure.services.ParticipationService;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.EventField;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.components.PersonField;
 import br.edu.ifba.aem.ui.pages.types.FormPage;
-import br.edu.ifba.aem.ui.views.MainView;
+import br.edu.ifba.aem.ui.utils.ConsoleColors;
 import br.edu.ifba.aem.ui.views.PeopleManagementView;
 import br.edu.ifba.aem.ui.views.View;
 import br.edu.ifba.aem.ui.views.ViewRepository;
 import java.io.PrintWriter;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -49,21 +43,16 @@ public class AddPersonToEventFormView extends FormPage implements View {
 
     fields.add(PersonField.of("person", "Enter Person's CPF"));
 
-    Map<String, List<FormField<?>>> modalityCondition = Map.of(
-        "HYBRID", List.of(FormField.choice(
-            "modality", "Select Participation Modality",
-            EventModality.IN_PERSON, // default value
-            EventModality.class,
-            EventModality::getLabel,
-            List.of(EventModality.HYBRID)
-        ))
-    );
+    Map<String, List<FormField<?>>> modalityCondition = Map.of("HYBRID", List.of(
+        FormField.choice("modality", "Select Participation Modality", EventModality.IN_PERSON,
+            // default value
+            EventModality.class, EventModality::getLabel, List.of(EventModality.HYBRID))));
 
-    fields.add(EventField.of("event", "Enter Event ID")
-        .withConditionalChildren(modalityCondition));
+    fields.add(EventField.of("event", "Enter Event ID").withConditionalChildren(modalityCondition));
 
-    fields.add(FormField.confirmation(
-        "confirm", "Are you sure you want to add this Person to the Event?", true));
+    fields.add(
+        FormField.confirmation("confirm", "Are you sure you want to add this Person to the Event?",
+            true));
 
     return fields;
   }
@@ -88,9 +77,7 @@ public class AddPersonToEventFormView extends FormPage implements View {
 
       results.forEach((key, value) -> {
         if (!key.equals("confirm")) {
-          writer.println(String.format("  %s: %s (Type: %s)",
-              key,
-              value,
+          writer.println(String.format("  %s: %s (Type: %s)", key, value,
               value != null ? value.getClass().getSimpleName() : "null"));
         }
       });
@@ -107,7 +94,8 @@ public class AddPersonToEventFormView extends FormPage implements View {
 
         if (event.getModality() == EventModality.HYBRID) {
           if (modality == null) {
-            throw new IllegalArgumentException("Participation modality must be selected for hybrid events.");
+            throw new IllegalArgumentException(
+                "Participation modality must be selected for hybrid events.");
           }
 
           participationModality = modality;
@@ -115,15 +103,14 @@ public class AddPersonToEventFormView extends FormPage implements View {
           participationModality = event.getModality();
         }
 
-        ParticipationService.INSTANCE.participate(
-            personCpf,
-            eventId,
-            participationModality
-        );
+        ParticipationService.INSTANCE.participate(personCpf, eventId, participationModality);
 
-        writer.println("Person added to the event successfully!");
+        writer.println(ConsoleColors.GREEN_BOLD + "Person added to the event successfully!"
+            + ConsoleColors.RESET);
       } catch (Exception exception) {
-        writer.println("Error adding person to event: " + exception.getMessage());
+        writer.println(
+            ConsoleColors.RED_BACKGROUND + ConsoleColors.RED + "Error adding person to event:"
+                + ConsoleColors.RESET + " " + exception.getMessage());
         if (AppConfig.DEBUG_MODE) {
           exception.printStackTrace(writer);
         }
@@ -132,7 +119,8 @@ public class AddPersonToEventFormView extends FormPage implements View {
 
     writer.println("\nPress Enter to return to the People Management menu...");
     provider.readLine("");
-    ViewRepository.INSTANCE.getById(PeopleManagementView.NAME).ifPresent(Application::handleContextSwitch);
+    ViewRepository.INSTANCE.getById(PeopleManagementView.NAME)
+        .ifPresent(Application::handleContextSwitch);
   }
 
 }

@@ -4,11 +4,9 @@ import br.edu.ifba.aem.application.AppConfig;
 import br.edu.ifba.aem.application.Application;
 import br.edu.ifba.aem.application.GlobalScope;
 import br.edu.ifba.aem.domain.entities.Person;
-import br.edu.ifba.aem.domain.entities.personas.External;
-import br.edu.ifba.aem.domain.entities.personas.Student;
-import br.edu.ifba.aem.domain.entities.personas.Teacher;
 import br.edu.ifba.aem.domain.enums.PersonType;
-import br.edu.ifba.aem.infrastructure.repositories.impl.PersonRepository;
+import br.edu.ifba.aem.infrastructure.services.PersonService;
+import br.edu.ifba.aem.infrastructure.services.pojos.PersonCreationRequestPojo;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.pages.types.FormPage;
@@ -98,18 +96,15 @@ public class PersonCreationFormView extends FormPage implements View {
         }
       });
 
-      PersonType selectedPersonType = (PersonType) results.get("category");
-
       try {
-        Person person = createPersonInstance(selectedPersonType, results);
-
-        PersonRepository.INSTANCE.save(person.getCpf(), person);
-        PersonRepository.INSTANCE.persist();
+        Person person = PersonService.INSTANCE.createPerson(
+            buildRequestPojo(results)
+        );
 
         writer.println(String.format("\nPerson '%s' with CPF %s created successfully!",
             person.getName(), GlobalScope.CPF_FORMATTER.apply(person.getCpf())));
       } catch (Exception exception) {
-        writer.println("Error saving person: " + exception.getMessage());
+        writer.println("Error creating person: " + exception.getMessage());
 
         if (AppConfig.DEBUG_MODE) {
           exception.printStackTrace(writer);
@@ -122,35 +117,18 @@ public class PersonCreationFormView extends FormPage implements View {
     ViewRepository.INSTANCE.getById(MainView.NAME).ifPresent(Application::handleContextSwitch);
   }
 
-  protected Person createPersonInstance(PersonType personType, Map<String, Object> results) {
-    try {
-      if (personType == null) {
-        throw new IllegalArgumentException("Person type cannot be null");
-      }
+  protected PersonCreationRequestPojo buildRequestPojo(Map<String, Object> results) {
+    PersonType selectedPersonType = (PersonType) results.get("category");
 
-      return switch (personType) {
-        case EXTERNAL -> External.builder()
-            .cpf((String) results.get("cpf"))
-            .name((String) results.get("name"))
-            .birthDate((LocalDate) results.get("birthDate"))
-            .type(personType)
-            .build();
-        case STUDENT -> Student.builder()
-            .cpf((String) results.get("cpf"))
-            .name((String) results.get("name"))
-            .birthDate((LocalDate) results.get("birthDate"))
-            .type(personType)
-            .build();
-        case TEACHER -> Teacher.builder()
-            .cpf((String) results.get("cpf"))
-            .name((String) results.get("name"))
-            .birthDate((LocalDate) results.get("birthDate"))
-            .type(personType)
-            .build();
-      };
-    } catch (Exception exception) {
-      throw new RuntimeException("Failed to create person instance for type: " + personType,
-          exception);
+    if (selectedPersonType == null) {
+      throw new IllegalArgumentException("Person type cannot be null");
     }
+
+    return new PersonCreationRequestPojo(
+        (String) results.get("cpf"),
+        (String) results.get("name"),
+        (LocalDate) results.get("birthDate"),
+        selectedPersonType
+    );
   }
 }

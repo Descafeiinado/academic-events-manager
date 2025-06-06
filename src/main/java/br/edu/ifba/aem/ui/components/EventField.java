@@ -16,7 +16,8 @@ import lombok.Setter;
 public class EventField extends FormField<Long> {
 
   private final Function<String, Optional<Event>> displayEventRetriever;
-  @Setter private transient String resolvedConditionalKey = null;
+  @Setter
+  private transient String resolvedConditionalKey = null;
 
   public EventField(String name, String label, Function<Event, Boolean> eventBusinessValidator) {
     super(
@@ -31,19 +32,6 @@ public class EventField extends FormField<Long> {
     );
 
     this.displayEventRetriever = createInternalDisplayEventRetriever();
-  }
-
-  public EventField withConditionalChildren(Map<String, List<FormField<?>>> conditionalChildren) {
-    return new EventField(
-        this.getName(),
-        this.getLabel(),
-        event -> true
-    ) {
-      @Override
-      public Map<String, List<FormField<?>>> getConditionalChildren() {
-        return conditionalChildren;
-      }
-    };
   }
 
   private static Function<String, Long> createEventParser(
@@ -151,6 +139,19 @@ public class EventField extends FormField<Long> {
   public static EventField of(String name, String label,
       Function<Event, Boolean> eventBusinessValidator) {
     return new EventField(name, label, eventBusinessValidator);
+  }
+
+  public EventField withConditionalChildren(Map<String, List<FormField<?>>> conditionalChildren) {
+    return new EventField(
+        this.getName(),
+        this.getLabel(),
+        event -> true
+    ) {
+      @Override
+      public Map<String, List<FormField<?>>> getConditionalChildren() {
+        return conditionalChildren;
+      }
+    };
   }
 
   public Function<String, Optional<Event>> getDisplayEventRetrieverFunction() {

@@ -2,7 +2,6 @@ package br.edu.ifba.aem.ui.pages.types;
 
 import br.edu.ifba.aem.application.AppConfig;
 import br.edu.ifba.aem.application.Application;
-import br.edu.ifba.aem.infrastructure.repositories.impl.EventRepository;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.pages.Page;
 import br.edu.ifba.aem.ui.providers.JLineInteractionProvider;
@@ -59,16 +58,7 @@ public abstract class NavigationPage extends Page {
       provider.getWriter().println("Exiting application...");
       provider.getWriter().flush();
 
-      if (provider.getNativeProvider() instanceof JLineInteractionProvider) {
-        try {
-          ((JLineInteractionProvider) provider.getNativeProvider()).getTerminal().close();
-        } catch (IOException ignored) {
-        }
-      }
-
-      EventRepository.INSTANCE.persist();
-
-      System.exit(0);
+      Application.finishGracefully();
     };
 
     String exitText = "Exit";

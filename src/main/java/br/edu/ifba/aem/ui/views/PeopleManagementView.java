@@ -4,7 +4,6 @@ import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.TextComponent;
 import br.edu.ifba.aem.ui.pages.types.NavigationPage;
 import br.edu.ifba.aem.ui.views.forms.AddPersonToEventFormView;
-import br.edu.ifba.aem.ui.views.forms.EventCreationFormView;
 import br.edu.ifba.aem.ui.views.forms.PersonCreationFormView;
 
 public class PeopleManagementView extends NavigationPage implements View {

@@ -1,7 +1,7 @@
 package br.edu.ifba.aem.domain.enums;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
+import br.edu.ifba.aem.ui.components.FormField;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -14,12 +14,23 @@ public enum EventModality {
 
   private final String label;
 
-  public static Stream<EventModality> stream() {
-    return Arrays.stream(EventModality.values());
+  public List<FormField<?>> getSpecificFieldsFromType() {
+
+    if (this == HYBRID) {
+      return List.of(
+          FormField.number("inPersonCapacity", "Enter event In-person Capacity", 25),
+          FormField.number("virtualCapacity", "Enter event Virtual Capacity", 25)
+      );
+    }
+
+    return List.of(
+        FormField.number("capacity", "Enter event capacity (overall)", 50)
+    );
   }
 
   @Override
   public String toString() {
     return label;
   }
+
 }

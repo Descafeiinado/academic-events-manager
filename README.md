@@ -5,7 +5,9 @@ cd C:\Development\Learning\academic-events-manager
 
 - ~~When pressing Ctrl+C in any FormPage, return him to the previous page;~~ cancelado
 - ~~Show confirmation for selected Person;~~
-- Convert hardcoded form operations to service calls;
-- Insert people in the event;
+- ~~Convert hardcoded form operations to service calls;~~
+- ~~Insert people in the event;~~
+  - ~~Course can only be selected if the person is a student;~~
 - Certificate Generation;
-- Relatório de eventos por tipo e data.
+- Event report by type and date;
+- List and detail events; (optional)

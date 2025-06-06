@@ -1,6 +1,8 @@
 package br.edu.ifba.aem.domain.entities.events;
 
 import br.edu.ifba.aem.domain.entities.Event;
+import br.edu.ifba.aem.domain.entities.Person;
+import br.edu.ifba.aem.domain.entities.interfaces.ParticipationRestrictive;
 import br.edu.ifba.aem.domain.enums.PersonType;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.components.PersonField;
@@ -14,10 +16,10 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @SuperBuilder
-public class Course extends Event {
+public class Course extends Event implements ParticipationRestrictive {
 
   private String instructor;
-  private int duration; // Duration in hours
+  private long duration; // Duration in hours
 
   @Override
   public List<FormField<?>> getSpecificFields() {
@@ -33,4 +35,11 @@ public class Course extends Event {
     );
   }
 
+  @Override
+  public void checkPersonCapability(Person person) {
+    if (person.getType() != PersonType.STUDENT) {
+      throw new IllegalArgumentException("Only students can participate in courses.");
+    }
+
+  }
 }

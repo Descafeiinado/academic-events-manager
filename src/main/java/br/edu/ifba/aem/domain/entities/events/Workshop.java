@@ -15,7 +15,7 @@ import lombok.experimental.SuperBuilder;
 public class Workshop extends Event {
 
   private boolean materialsProvided;
-  private int numberOfSessions;
+  private long numberOfSessions;
 
   @Override
   public List<FormField<?>> getSpecificFields() {

@@ -2,6 +2,7 @@ package br.edu.ifba.aem.domain.entities;
 
 import br.edu.ifba.aem.domain.enums.EventModality;
 import br.edu.ifba.aem.domain.enums.EventType;
+import br.edu.ifba.aem.domain.models.EventCapacity;
 import br.edu.ifba.aem.ui.components.FormField;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -24,13 +25,13 @@ public abstract class Event {
 
   private EventType type;
   private EventModality modality;
+  private EventCapacity capacity;
 
   @Builder.Default
   private List<String> inPersonParticipants = new ArrayList<>();
   @Builder.Default
   private List<String> virtualParticipants = new ArrayList<>();
 
-  private Integer capacity;
   private String description;
 
   public Event() {
@@ -41,9 +42,9 @@ public abstract class Event {
     return SEQUENTIAL_ID_PROVIDER;
   }
 
-    /*
-        Static Methods
-     */
+   /*
+      Static Methods
+   */
 
   public abstract List<FormField<?>> getSpecificFields();
 

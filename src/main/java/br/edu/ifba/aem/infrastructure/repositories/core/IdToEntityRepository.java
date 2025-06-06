@@ -4,7 +4,9 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
+@SuppressWarnings("unused")
 public class IdToEntityRepository<I, T> {
 
   protected Map<I, T> data;
@@ -31,6 +33,10 @@ public class IdToEntityRepository<I, T> {
 
   public T save(I id, T value) {
     return data.put(id, value);
+  }
+
+  public Stream<T> stream() {
+    return data.values().stream();
   }
 
 }

@@ -8,7 +8,7 @@ import org.jline.utils.OSUtils;
 public class AppConfig {
 
   public static boolean EXITED_ON_PURPOSE = false;
-  public static boolean DEBUG_MODE = true;
+  public static boolean DEBUG_MODE = false;
 
   public static ConsolePrompt.UiConfig UI_CONFIG = generateUiConfig();
 
@@ -20,7 +20,7 @@ public class AppConfig {
     if (OSUtils.IS_WINDOWS) {
       config = new ConsolePrompt.UiConfig(">", "( )", "(x)", "( )");
     } else {
-      config = new ConsolePrompt.UiConfig("\u276F", "\u25EF ", "\u25C9 ", "\u25EF ");
+      config = new ConsolePrompt.UiConfig("❯", "◯ ", "◉ ", "◯ ");
     }
 
     config.setCancellableFirstPrompt(true);

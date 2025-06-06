@@ -16,7 +16,16 @@ public class PersonRepository extends IdToEntityRepository<String, Person> imple
 
   public static final PersonRepository INSTANCE = new PersonRepository();
 
-  private PersonRepository() {}
+  private PersonRepository() {
+  }
+
+  @Override
+  public Person save(String cpf, Person value) {
+    super.save(cpf, value);
+    this.persist();
+
+    return value;
+  }
 
   @Override
   public void load() {

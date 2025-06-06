@@ -17,6 +17,14 @@ public class EventRepository extends IdToEntityRepository<Long, Event> implement
   public static final EventRepository INSTANCE = new EventRepository();
 
   @Override
+  public Event save(Long id, Event value) {
+    super.save(id, value);
+    this.persist();
+
+    return value;
+  }
+
+  @Override
   public void load() {
     Type jsonArrayType = new TypeToken<JsonArray>() {
     }.getType();
@@ -41,7 +49,7 @@ public class EventRepository extends IdToEntityRepository<Long, Event> implement
       }
     }
 
-    Event.getSequentialIdProvider().setCurrentId(++maxId);
+    Event.getSequentialIdProvider().setCurrentId(maxId);
   }
 
   @Override

@@ -9,7 +9,8 @@ import br.edu.ifba.aem.domain.entities.events.Lecture;
 import br.edu.ifba.aem.domain.entities.events.Workshop;
 import br.edu.ifba.aem.domain.enums.EventModality;
 import br.edu.ifba.aem.domain.enums.EventType;
-import br.edu.ifba.aem.infrastructure.repositories.impl.EventRepository;
+import br.edu.ifba.aem.domain.models.EventCapacity;
+import br.edu.ifba.aem.infrastructure.services.EventService;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.pages.types.FormPage;
@@ -63,11 +64,17 @@ public class EventCreationFormView extends FormPage implements View {
         eventTypeConditionalChildren)
     );
 
+    Map<String, List<FormField<?>>> modalityConditionalChildren = new HashMap<>();
+
+    for (EventModality modality : EventModality.values()) {
+      modalityConditionalChildren.put(modality.name(), modality.getSpecificFieldsFromType());
+    }
+
     fields.add(FormField.choice("modality", "Select event modality",
-        EventModality.VIRTUAL, EventModality.class, EventModality::getLabel)
+        EventModality.VIRTUAL, EventModality.class, EventModality::getLabel,
+        modalityConditionalChildren)
     );
 
-    fields.add(FormField.number("capacity", "Enter event capacity (overall)", 50));
     fields.add(FormField.freeText("description", "Enter event description (optional)", ""));
     fields.add(
         FormField.confirmation("confirmCreation", "Are you sure you want to create this event?",
@@ -105,16 +112,12 @@ public class EventCreationFormView extends FormPage implements View {
       EventType selectedEventType = (EventType) results.get("eventType");
 
       try {
-        Event event = createEventInstance(selectedEventType, results);
-
-        EventRepository.INSTANCE.save(event.getId(), event);
-        EventRepository.INSTANCE.persist();
+        Event event = EventService.INSTANCE.createEvent(
+            createEventObject(selectedEventType, results));
 
         writer.println(String.format("\nEvent #%d '%s' (%s) created successfully!", event.getId(),
             event.getTitle(), event.getType().getLabel()));
       } catch (Exception exception) {
-        Event.getSequentialIdProvider().rollback();
-
         writer.println("Error creating event instance: " + exception.getMessage());
 
         if (AppConfig.DEBUG_MODE) {
@@ -128,10 +131,23 @@ public class EventCreationFormView extends FormPage implements View {
     ViewRepository.INSTANCE.getById(MainView.NAME).ifPresent(Application::handleContextSwitch);
   }
 
-  protected Event createEventInstance(EventType eventType, Map<String, Object> results) {
+  protected Event createEventObject(EventType eventType, Map<String, Object> results) {
     try {
       if (eventType == null) {
         throw new IllegalArgumentException("Event type cannot be null");
+      }
+
+      EventModality modality = (EventModality) results.get("modality");
+      EventCapacity.EventCapacityBuilder capacityBuilder = EventCapacity.builder()
+          .inPersonCapacity(0L)
+          .virtualCapacity(0L);
+
+      switch (modality) {
+        case VIRTUAL -> capacityBuilder.virtualCapacity((Long) results.get("capacity"));
+        case IN_PERSON -> capacityBuilder.inPersonCapacity((Long) results.get("capacity"));
+        case HYBRID -> capacityBuilder
+            .inPersonCapacity((Long) results.get("inPersonCapacity"))
+            .virtualCapacity((Long) results.get("virtualCapacity"));
       }
 
       return switch (eventType) {
@@ -140,10 +156,10 @@ public class EventCreationFormView extends FormPage implements View {
             .date((LocalDateTime) results.get("dateTime"))
             .place((String) results.get("place"))
             .type(eventType)
-            .modality((EventModality) results.get("modality"))
-            .capacity((Integer) results.get("capacity"))
+            .modality(modality)
+            .capacity(capacityBuilder.build())
             .description((String) results.get("description"))
-            .duration((Integer) results.get("duration"))
+            .duration((Long) results.get("duration"))
             .instructor((String) results.get("instructor"))
             .build();
         case LECTURE -> Lecture.builder()
@@ -151,8 +167,8 @@ public class EventCreationFormView extends FormPage implements View {
             .date((LocalDateTime) results.get("dateTime"))
             .place((String) results.get("place"))
             .type(eventType)
-            .modality((EventModality) results.get("modality"))
-            .capacity((Integer) results.get("capacity"))
+            .modality(modality)
+            .capacity(capacityBuilder.build())
             .description((String) results.get("description"))
             .speaker((String) results.get("speaker"))
             .topic((String) results.get("topic"))
@@ -162,19 +178,19 @@ public class EventCreationFormView extends FormPage implements View {
             .date((LocalDateTime) results.get("dateTime"))
             .place((String) results.get("place"))
             .type(eventType)
-            .modality((EventModality) results.get("modality"))
-            .capacity((Integer) results.get("capacity"))
+            .modality(modality)
+            .capacity(capacityBuilder.build())
             .description((String) results.get("description"))
             .materialsProvided((Boolean) results.get("materialsProvided"))
-            .numberOfSessions((Integer) results.get("numberOfSessions"))
+            .numberOfSessions((Long) results.get("numberOfSessions"))
             .build();
         case FAIR -> Fair.builder()
             .title((String) results.get("eventName"))
             .date((LocalDateTime) results.get("dateTime"))
             .place((String) results.get("place"))
             .type(eventType)
-            .modality((EventModality) results.get("modality"))
-            .capacity((Integer) results.get("capacity"))
+            .modality(modality)
+            .capacity(capacityBuilder.build())
             .description((String) results.get("description"))
             .build();
       };
