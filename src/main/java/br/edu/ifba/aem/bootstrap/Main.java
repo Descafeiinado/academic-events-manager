@@ -5,7 +5,6 @@ import br.edu.ifba.aem.application.Application;
 import br.edu.ifba.aem.infrastructure.repositories.impl.EventRepository;
 import br.edu.ifba.aem.infrastructure.repositories.impl.PersonRepository;
 import br.edu.ifba.aem.ui.views.ViewRepository;
-import java.io.IOException;
 
 public class Main {
 
@@ -18,8 +17,8 @@ public class Main {
     try {
       System.out.println("Attempting to start in JLine mode...");
 
-//      Application.run();
-      throw new IOException("Simulating JLine failure for testing fallback to legacy mode");
+      Application.run();
+//      throw new IOException("Simulating JLine failure for testing fallback to legacy mode");
     } catch (NoClassDefFoundError | ExceptionInInitializerError error) {
       if (AppConfig.EXITED_ON_PURPOSE) {
         return;

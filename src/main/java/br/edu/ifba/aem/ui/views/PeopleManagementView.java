@@ -3,6 +3,7 @@ package br.edu.ifba.aem.ui.views;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.TextComponent;
 import br.edu.ifba.aem.ui.pages.types.NavigationPage;
+import br.edu.ifba.aem.ui.views.certificate.SelectPersonToEmitCertificateFormView;
 import br.edu.ifba.aem.ui.views.forms.AddPersonToEventFormView;
 import br.edu.ifba.aem.ui.views.forms.PersonCreationFormView;
 
@@ -30,6 +31,9 @@ public class PeopleManagementView extends NavigationPage implements View {
   public void configureNavigationOptions(InteractionProvider provider) {
     addNavigationOption("Create New Person", PersonCreationFormView.NAME);
     addNavigationOption("Add Person to Event", AddPersonToEventFormView.NAME);
+
+    addNavigationOption("Emit Participation Certificate",
+        SelectPersonToEmitCertificateFormView.NAME);
 
     addBackOption(provider, "MAIN");
   }

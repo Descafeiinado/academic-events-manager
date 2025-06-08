@@ -1,6 +1,7 @@
 package br.edu.ifba.aem.domain.entities.events;
 
 import br.edu.ifba.aem.domain.entities.Event;
+import br.edu.ifba.aem.domain.entities.Person;
 import br.edu.ifba.aem.ui.components.FormField;
 import java.util.List;
 import lombok.Data;
@@ -22,6 +23,19 @@ public class Workshop extends Event {
     return List.of(
         FormField.confirmation("materialsProvided", "Materials gonna be Provided", false),
         FormField.number("numberOfSessions", "Number of Sessions", 1)
+    );
+  }
+
+  @Override
+  public String getCertificateTemplate(Person person) {
+    return String.format(
+        "Certificate of Participation\n\nThis certifies that %s has participated in the workshop \"%s\" with %d session(s)%s, held on %s at %s.",
+        person.getName(),
+        getTitle(),
+        getNumberOfSessions(),
+        isMaterialsProvided() ? " (materials were provided)" : "",
+        getDate().toLocalDate(),
+        getPlace()
     );
   }
 

@@ -7,7 +7,6 @@ import br.edu.ifba.aem.ui.components.FormField;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
@@ -27,9 +26,7 @@ public abstract class Event {
   private EventModality modality;
   private EventCapacity capacity;
 
-  @Builder.Default
   private List<String> inPersonParticipants = new ArrayList<>();
-  @Builder.Default
   private List<String> virtualParticipants = new ArrayList<>();
 
   private String description;
@@ -45,6 +42,8 @@ public abstract class Event {
    /*
       Static Methods
    */
+
+  public abstract String getCertificateTemplate(Person person);
 
   public abstract List<FormField<?>> getSpecificFields();
 

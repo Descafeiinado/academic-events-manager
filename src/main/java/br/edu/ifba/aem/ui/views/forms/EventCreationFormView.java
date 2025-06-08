@@ -15,7 +15,6 @@ import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.pages.types.FormPage;
 import br.edu.ifba.aem.ui.views.EventManagementView;
-import br.edu.ifba.aem.ui.views.MainView;
 import br.edu.ifba.aem.ui.views.View;
 import br.edu.ifba.aem.ui.views.ViewRepository;
 import java.io.PrintWriter;
@@ -100,35 +99,37 @@ public class EventCreationFormView extends FormPage implements View {
     PrintWriter writer = provider.getWriter();
     writer.println("\n--- Form Submission Processing ---");
 
-    if (results == null || results.isEmpty() || !Boolean.TRUE.equals(
-        results.get("confirmCreation"))) {
-      if (results != null && !results.isEmpty() && !Boolean.TRUE.equals(
-          results.get("confirmCreation"))) {
-        writer.println("Event creation cancelled by user.");
-      } else {
+    boolean hasNoData = results == null || results.isEmpty();
+    boolean isCreationConfirmed = !hasNoData && Boolean.TRUE.equals(results.get("confirmCreation"));
+
+    if (!isCreationConfirmed) {
+      if (hasNoData) {
         writer.println("Form was cancelled, an error occurred, or no data was entered.");
+      } else {
+        writer.println("Event creation cancelled by user.");
       }
-    } else {
-      EventType selectedEventType = (EventType) results.get("eventType");
 
-      try {
-        Event event = EventService.INSTANCE.createEvent(
-            createEventObject(selectedEventType, results));
+      promptReturnToLatestMenu(provider);
+      return;
+    }
 
-        writer.println(String.format("\nEvent #%d '%s' (%s) created successfully!", event.getId(),
-            event.getTitle(), event.getType().getLabel()));
-      } catch (Exception exception) {
-        writer.println("Error creating event instance: " + exception.getMessage());
+    EventType selectedEventType = (EventType) results.get("eventType");
 
-        if (AppConfig.DEBUG_MODE) {
-          exception.printStackTrace(writer);
-        }
+    try {
+      Event event = EventService.INSTANCE.createEvent(
+          createEventObject(selectedEventType, results));
+
+      writer.println(String.format("\nEvent #%d '%s' (%s) created successfully!", event.getId(),
+          event.getTitle(), event.getType().getLabel()));
+    } catch (Exception exception) {
+      writer.println("Error creating event instance: " + exception.getMessage());
+
+      if (AppConfig.DEBUG_MODE) {
+        exception.printStackTrace(writer);
       }
     }
 
-    writer.println("\nPress Enter to return to the main menu...");
-    provider.readLine("");
-    ViewRepository.INSTANCE.getById(MainView.NAME).ifPresent(Application::handleContextSwitch);
+    promptReturnToLatestMenu(provider);
   }
 
   protected Event createEventObject(EventType eventType, Map<String, Object> results) {
@@ -200,4 +201,15 @@ public class EventCreationFormView extends FormPage implements View {
           exception);
     }
   }
+
+  private void promptReturnToLatestMenu(InteractionProvider provider) {
+    PrintWriter writer = provider.getWriter();
+
+    writer.println("\nPress Enter to return to the Event Management menu...");
+    provider.readLine("");
+
+    ViewRepository.INSTANCE.getById(EventManagementView.NAME)
+        .ifPresent(Application::handleContextSwitch);
+  }
+
 }

@@ -4,7 +4,9 @@ import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.TextComponent;
 import br.edu.ifba.aem.ui.pages.Page;
 import java.util.function.Consumer;
+import lombok.Setter;
 
+@Setter
 public class StaticPage extends Page {
 
   private Consumer<InteractionProvider> onGoBack;
@@ -15,10 +17,6 @@ public class StaticPage extends Page {
 
   public void addText(String text) {
     addComponent(new TextComponent(text));
-  }
-
-  public void setOnGoBack(Consumer<InteractionProvider> onGoBack) {
-    this.onGoBack = onGoBack;
   }
 
   @Override

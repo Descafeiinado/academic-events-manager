@@ -8,6 +8,7 @@ cd C:\Development\Learning\academic-events-manager
 - ~~Convert hardcoded form operations to service calls;~~
 - ~~Insert people in the event;~~
   - ~~Course can only be selected if the person is a student;~~
-- Certificate Generation;
+- ~~Certificate Generation;~~
+  - Maybe we could save the emitted certificates in a database (optional);
 - Event report by type and date;
 - List and detail events; (optional)

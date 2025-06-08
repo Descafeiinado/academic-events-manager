@@ -13,4 +13,5 @@ public class EventCapacity {
 
   public Long inPersonCapacity = 0L;
   public Long virtualCapacity = 0L;
+
 }

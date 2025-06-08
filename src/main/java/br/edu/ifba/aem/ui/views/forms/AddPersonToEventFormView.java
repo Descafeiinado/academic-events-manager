@@ -66,59 +66,64 @@ public class AddPersonToEventFormView extends FormPage implements View {
     PrintWriter writer = provider.getWriter();
     writer.println("\n--- Form Submission Processing ---");
 
-    if (results == null || results.isEmpty() || !Boolean.TRUE.equals(results.get("confirm"))) {
-      if (results != null && !results.isEmpty() && !Boolean.TRUE.equals(results.get("confirm"))) {
-        writer.println("Event creation cancelled by user.");
-      } else {
+    boolean hasNoData = results == null || results.isEmpty();
+    boolean isCreationConfirmed = !hasNoData && Boolean.TRUE.equals(results.get("confirmCreation"));
+
+    if (!isCreationConfirmed) {
+      if (hasNoData) {
         writer.println("Form was cancelled, an error occurred, or no data was entered.");
+      } else {
+        writer.println("Person subscription cancelled by user.");
       }
-    } else {
-      writer.println("Received data:");
 
-      results.forEach((key, value) -> {
-        if (!key.equals("confirm")) {
-          writer.println(String.format("  %s: %s (Type: %s)", key, value,
-              value != null ? value.getClass().getSimpleName() : "null"));
-        }
-      });
+      promptReturnToLatestMenu(provider);
+      return;
+    }
 
-      try {
-        String personCpf = (String) results.get("person");
-        Long eventId = (Long) results.get("event");
-        EventModality modality = (EventModality) results.get("modality");
+    try {
+      String personCpf = (String) results.get("person");
+      Long eventId = (Long) results.get("event");
+      EventModality modality = (EventModality) results.get("modality");
 
-        Event event = EventRepository.INSTANCE.getById(eventId)
-            .orElseThrow(() -> new IllegalArgumentException("Event not found for ID: " + eventId));
+      Event event = EventRepository.INSTANCE.getById(eventId)
+          .orElseThrow(() -> new IllegalArgumentException("Event not found for ID: " + eventId));
 
-        EventModality participationModality;
+      EventModality participationModality;
 
-        if (event.getModality() == EventModality.HYBRID) {
-          if (modality == null) {
-            throw new IllegalArgumentException(
-                "Participation modality must be selected for hybrid events.");
-          }
-
-          participationModality = modality;
-        } else {
-          participationModality = event.getModality();
+      if (event.getModality() == EventModality.HYBRID) {
+        if (modality == null) {
+          throw new IllegalArgumentException(
+              "Participation modality must be selected for hybrid events.");
         }
 
-        ParticipationService.INSTANCE.participate(personCpf, eventId, participationModality);
+        participationModality = modality;
+      } else {
+        participationModality = event.getModality();
+      }
 
-        writer.println(ConsoleColors.GREEN_BOLD + "Person added to the event successfully!"
-            + ConsoleColors.RESET);
-      } catch (Exception exception) {
-        writer.println(
-            ConsoleColors.RED_BACKGROUND + ConsoleColors.RED + "Error adding person to event:"
-                + ConsoleColors.RESET + " " + exception.getMessage());
-        if (AppConfig.DEBUG_MODE) {
-          exception.printStackTrace(writer);
-        }
+      ParticipationService.INSTANCE.participate(personCpf, eventId, participationModality);
+
+      writer.println(ConsoleColors.GREEN_BOLD + "Person added to the event successfully!"
+          + ConsoleColors.RESET);
+    } catch (Exception exception) {
+      writer.println(
+          ConsoleColors.RED_BACKGROUND + ConsoleColors.RED + "Error adding person to event:"
+              + ConsoleColors.RESET + " " + exception.getMessage());
+
+      if (AppConfig.DEBUG_MODE) {
+        exception.printStackTrace(writer);
       }
     }
 
+    promptReturnToLatestMenu(provider);
+  }
+
+  private void promptReturnToLatestMenu(InteractionProvider provider) {
+    PrintWriter writer = provider.getWriter();
+
     writer.println("\nPress Enter to return to the People Management menu...");
     provider.readLine("");
+
     ViewRepository.INSTANCE.getById(PeopleManagementView.NAME)
         .ifPresent(Application::handleContextSwitch);
   }

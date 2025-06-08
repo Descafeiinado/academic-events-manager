@@ -10,7 +10,6 @@ import br.edu.ifba.aem.infrastructure.services.pojos.PersonCreationRequestPojo;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.pages.types.FormPage;
-import br.edu.ifba.aem.ui.views.MainView;
 import br.edu.ifba.aem.ui.views.PeopleManagementView;
 import br.edu.ifba.aem.ui.views.View;
 import br.edu.ifba.aem.ui.views.ViewRepository;
@@ -45,12 +44,10 @@ public class PersonCreationFormView extends FormPage implements View {
     fields.add(FormField.cpf("cpf", "Enter Person's CPF", null));
     fields.add(FormField.text("name", "Enter Person's Name", "John Doe"));
     fields.add(FormField.date("birthDate", "Enter Person's Birth Date",
-        LocalDateTime.now().minusYears(20).toLocalDate()
-    ));
+        LocalDateTime.now().minusYears(20).toLocalDate()));
 
-    fields.add(FormField.choice("category", "Select Person's Category",
-        PersonType.EXTERNAL, PersonType.class, PersonType::getLabel)
-    );
+    fields.add(FormField.choice("category", "Select Person's Category", PersonType.EXTERNAL,
+        PersonType.class, PersonType::getLabel));
 
     fields.add(
         FormField.confirmation("confirmCreation", "Are you sure you want to create this person?",
@@ -76,45 +73,35 @@ public class PersonCreationFormView extends FormPage implements View {
     PrintWriter writer = provider.getWriter();
     writer.println("\n--- Form Submission Processing ---");
 
-    if (results == null || results.isEmpty() || !Boolean.TRUE.equals(
-        results.get("confirmCreation"))) {
-      if (results != null && !results.isEmpty() && !Boolean.TRUE.equals(
-          results.get("confirmCreation"))) {
-        writer.println("Person creation cancelled by user.");
-      } else {
+    boolean hasNoData = results == null || results.isEmpty();
+    boolean isCreationConfirmed = !hasNoData && Boolean.TRUE.equals(results.get("confirmCreation"));
+
+    if (!isCreationConfirmed) {
+      if (hasNoData) {
         writer.println("Form was cancelled, an error occurred, or no data was entered.");
+      } else {
+        writer.println("Person creation cancelled by user.");
       }
-    } else {
-      writer.println("Received data:");
 
-      results.forEach((key, value) -> {
-        if (!key.equals("confirmCreation")) {
-          writer.println(String.format("  %s: %s (Type: %s)",
-              key,
-              value,
-              value != null ? value.getClass().getSimpleName() : "null"));
-        }
-      });
+      promptReturnToLatestMenu(provider);
+      return;
+    }
 
-      try {
-        Person person = PersonService.INSTANCE.createPerson(
-            buildRequestPojo(results)
-        );
+    try {
+      Person person = PersonService.INSTANCE.createPerson(buildRequestPojo(results));
 
-        writer.println(String.format("\nPerson '%s' with CPF %s created successfully!",
-            person.getName(), GlobalScope.CPF_FORMATTER.apply(person.getCpf())));
-      } catch (Exception exception) {
-        writer.println("Error creating person: " + exception.getMessage());
+      writer.println(
+          String.format("\nPerson '%s' with CPF %s created successfully!", person.getName(),
+              GlobalScope.CPF_FORMATTER.apply(person.getCpf())));
+    } catch (Exception exception) {
+      writer.println("Error creating person: " + exception.getMessage());
 
-        if (AppConfig.DEBUG_MODE) {
-          exception.printStackTrace(writer);
-        }
+      if (AppConfig.DEBUG_MODE) {
+        exception.printStackTrace(writer);
       }
     }
 
-    writer.println("\nPress Enter to return to the main menu...");
-    provider.readLine("");
-    ViewRepository.INSTANCE.getById(MainView.NAME).ifPresent(Application::handleContextSwitch);
+    promptReturnToLatestMenu(provider);
   }
 
   protected PersonCreationRequestPojo buildRequestPojo(Map<String, Object> results) {
@@ -124,11 +111,18 @@ public class PersonCreationFormView extends FormPage implements View {
       throw new IllegalArgumentException("Person type cannot be null");
     }
 
-    return new PersonCreationRequestPojo(
-        (String) results.get("cpf"),
-        (String) results.get("name"),
-        (LocalDate) results.get("birthDate"),
-        selectedPersonType
-    );
+    return new PersonCreationRequestPojo((String) results.get("cpf"), (String) results.get("name"),
+        (LocalDate) results.get("birthDate"), selectedPersonType);
   }
+
+  private void promptReturnToLatestMenu(InteractionProvider provider) {
+    PrintWriter writer = provider.getWriter();
+
+    writer.println("\nPress Enter to return to the People Management menu...");
+    provider.readLine("");
+
+    ViewRepository.INSTANCE.getById(PeopleManagementView.NAME)
+        .ifPresent(Application::handleContextSwitch);
+  }
+
 }

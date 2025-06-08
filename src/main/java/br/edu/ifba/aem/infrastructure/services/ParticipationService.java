@@ -54,7 +54,7 @@ public class ParticipationService {
         ) {
           throw new EventFullException(
               event,
-              "In-person capacity reached."
+              "In-person"
           );
         }
 
@@ -75,7 +75,7 @@ public class ParticipationService {
         ) {
           throw new EventFullException(
               event,
-              "Virtual capacity reached."
+              "Virtual"
           );
         }
 
