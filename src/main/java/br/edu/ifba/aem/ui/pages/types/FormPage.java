@@ -938,8 +938,7 @@ public abstract class FormPage extends Page {
           GlobalScope.DATE_FORMAT.format(ld);
       case LocalDateTime ldt when field.getFieldType() == FieldType.DATETIME ->
           GlobalScope.DATE_TIME_FORMAT.format(ldt);
-      case DateRange dr when field.getFieldType() == FieldType.DATERANGE ->
-          dr.toString();
+      case DateRange dr when field.getFieldType() == FieldType.DATERANGE -> dr.toString();
       case Boolean b -> b.toString();
       default -> defVal.toString();
     };
@@ -957,8 +956,7 @@ public abstract class FormPage extends Page {
       case LocalDate ld when fieldType == FieldType.DATE -> GlobalScope.DATE_FORMAT.format(ld);
       case LocalDateTime ldt when fieldType == FieldType.DATETIME ->
           GlobalScope.DATE_TIME_FORMAT.format(ldt);
-      case DateRange dr when fieldType == FieldType.DATERANGE ->
-          dr.toString();
+      case DateRange dr when fieldType == FieldType.DATERANGE -> dr.toString();
       case Enum<?> enumVal when fieldType == FieldType.CHOICE -> isJLineContext ? enumVal.name() :
           field.getOptions() != null ? field.getOptions()
               .getOrDefault(enumVal.name(), enumVal.toString()) : enumVal.toString();

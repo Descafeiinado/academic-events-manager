@@ -1,0 +1,60 @@
+[
+  {
+    "instructor": "00000000001",
+    "duration": 60,
+    "id": 2,
+    "title": "Curso de QT 6",
+    "date": "2025-06-02T10:00:00",
+    "place": "Auditório do IFBA + Google Meet",
+    "description": "Um Curso incrível ensinando os fundamentos do QT 6 para desenvolvimento de aplicativos multiplataforma.",
+    "type": "COURSE",
+    "modality": "HYBRID",
+    "capacity": {
+      "inPersonCapacity": 225,
+      "virtualCapacity": 400
+    },
+    "createdAt": "2025-06-09T01:17:50.7726228",
+    "inPersonParticipants": [],
+    "virtualParticipants": [
+      "00000000002"
+    ]
+  },
+  {
+    "speaker": "00000000002",
+    "topic": "VALORANT",
+    "id": 3,
+    "title": "How to be a VALORANT Pro",
+    "date": "2025-06-12T10:00:00",
+    "place": "Online Platform",
+    "description": "",
+    "type": "LECTURE",
+    "modality": "IN_PERSON",
+    "capacity": {
+      "inPersonCapacity": 1,
+      "virtualCapacity": 0
+    },
+    "createdAt": "2025-06-09T01:17:50.7926203",
+    "inPersonParticipants": [
+      "00000000001"
+    ],
+    "virtualParticipants": []
+  },
+  {
+    "speaker": "12345678909",
+    "topic": "Desenvolvimento de Software",
+    "id": 4,
+    "title": "Desenvolvimento de Software com Python",
+    "date": "2025-06-15T10:00:00",
+    "place": "Auditório do IFBA",
+    "description": "Aprenda os fundamentos do desenvolvimento de software com Python, desde a sintaxe básica até conceitos avançados.",
+    "type": "LECTURE",
+    "modality": "IN_PERSON",
+    "capacity": {
+      "inPersonCapacity": 100,
+      "virtualCapacity": 0
+    },
+    "createdAt": "2025-06-09T02:56:50.8126192",
+    "inPersonParticipants": [],
+    "virtualParticipants": []
+  }
+]

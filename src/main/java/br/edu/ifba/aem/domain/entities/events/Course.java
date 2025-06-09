@@ -6,6 +6,7 @@ import br.edu.ifba.aem.domain.entities.Person;
 import br.edu.ifba.aem.domain.entities.interfaces.ParticipationRestrictive;
 import br.edu.ifba.aem.domain.entities.personas.Teacher;
 import br.edu.ifba.aem.domain.enums.PersonType;
+import br.edu.ifba.aem.domain.utils.Pair;
 import br.edu.ifba.aem.infrastructure.repositories.impl.PersonRepository;
 import br.edu.ifba.aem.ui.components.FormField;
 import br.edu.ifba.aem.ui.components.PersonField;
@@ -56,14 +57,24 @@ public class Course extends Event implements ParticipationRestrictive {
     Teacher instructorPerson = getInstructorPerson();
 
     return String.format(
-        "Certificate of Participation\n\nThis certifies that %s has successfully participated in the course \"%s\" instructed by %s, with a total duration of %d hours, held on %s at %s.",
+        "Certificate of Participation\n\nThis certifies that %s has successfully participated in the course \"%s\" (#%d) instructed by %s, with a total duration of %d hours, held on %s at %s.",
         person.getName(),
         getTitle(),
+        getId(),
         instructorPerson != null ? instructorPerson.getName()
             : "Unknown Instructor with CPF " + GlobalScope.CPF_REDACTOR.apply(getInstructor()),
         getDuration(),
         getDate().toLocalDate(),
         getPlace()
+    );
+  }
+
+  @Override
+  public List<Pair<String, String>> getDescriptiveFields() {
+    return List.of(
+        Pair.of("Instructor", getInstructorPerson() != null ? getInstructorPerson().getName()
+            : "Unknown Instructor with CPF " + GlobalScope.CPF_REDACTOR.apply(getInstructor())),
+        Pair.of("Duration", String.format("%d hours", getDuration()))
     );
   }
 

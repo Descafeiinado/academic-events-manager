@@ -35,7 +35,8 @@ public class SelectEventToCertificateView extends NavigationPage implements View
   @Override
   public void configureNavigationOptions(InteractionProvider provider) {
     for (Event event : certifiableEvents) {
-      String optionName = String.format("%s | %s: %s", event.getDate().format(GlobalScope.DATE_FORMAT),
+      String optionName = String.format("%s | %s: %s",
+          event.getDate().format(GlobalScope.DATE_FORMAT),
           event.getType().getLabel(), event.getTitle());
 
       addCustomAction(optionName, () -> Application.handleContextSwitch(

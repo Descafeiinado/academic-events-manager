@@ -1,0 +1,36 @@
+[
+  {
+    "lecturesPresented": [
+      4
+    ],
+    "eventsParticipated": [],
+    "cpf": "12345678909",
+    "name": "Elizabeth II",
+    "birthDate": "1926-04-21",
+    "type": "EXTERNAL",
+    "createdAt": "2025-06-09T01:17:50.7966213"
+  },
+  {
+    "eventsParticipated": [
+      2
+    ],
+    "cpf": "00000000002",
+    "name": "Erick (Aspas) Santos",
+    "birthDate": "2003-06-15",
+    "type": "STUDENT",
+    "createdAt": "2025-06-09T01:17:50.8016229"
+  },
+  {
+    "coursesTaught": [
+      2
+    ],
+    "eventsParticipated": [
+      3
+    ],
+    "cpf": "00000000001",
+    "name": "Srando (Homi do QT) Andrade",
+    "birthDate": "2011-11-11",
+    "type": "TEACHER",
+    "createdAt": "2025-06-09T01:17:50.7996206"
+  }
+]

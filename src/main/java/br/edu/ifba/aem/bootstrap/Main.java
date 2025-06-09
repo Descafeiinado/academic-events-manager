@@ -18,7 +18,6 @@ public class Main {
       System.out.println("Attempting to start in JLine mode...");
 
       Application.run();
-//      throw new IOException("Simulating JLine failure for testing fallback to legacy mode");
     } catch (NoClassDefFoundError | ExceptionInInitializerError error) {
       if (AppConfig.EXITED_ON_PURPOSE) {
         return;

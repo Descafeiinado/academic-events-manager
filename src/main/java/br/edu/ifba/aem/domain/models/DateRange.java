@@ -14,17 +14,6 @@ public record DateRange(LocalDate start, LocalDate end) {
     }
   }
 
-  public boolean contains(LocalDate dateTime) {
-    return (dateTime.equals(start) || dateTime.isAfter(start)) && (dateTime.equals(end)
-        || dateTime.isBefore(end));
-  }
-
-  @Override
-  public String toString() {
-    return String.format("%s-%s", start.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-        end.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-  }
-
   public static DateRange parse(String dateRange) {
     if (dateRange == null || !dateRange.matches(DATE_RANGE_REGEX)) {
       throw new IllegalArgumentException(
@@ -37,6 +26,17 @@ public record DateRange(LocalDate start, LocalDate end) {
     LocalDate end = LocalDate.parse(dates[1], DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
     return new DateRange(start, end);
+  }
+
+  public boolean contains(LocalDate dateTime) {
+    return (dateTime.equals(start) || dateTime.isAfter(start)) && (dateTime.equals(end)
+        || dateTime.isBefore(end));
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%s-%s", start.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+        end.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
   }
 
 }
