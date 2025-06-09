@@ -51,7 +51,6 @@ public class EventCreationFormView extends FormPage implements View {
     ));
     fields.add(FormField.text("place", "Enter event place", "Online Platform"));
 
-    // --- Define conditional fields ---
     Map<String, List<FormField<?>>> eventTypeConditionalChildren = new HashMap<>();
 
     for (EventType eventType : EventType.values()) {

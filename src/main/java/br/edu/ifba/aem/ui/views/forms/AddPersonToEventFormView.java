@@ -45,7 +45,6 @@ public class AddPersonToEventFormView extends FormPage implements View {
 
     Map<String, List<FormField<?>>> modalityCondition = Map.of("HYBRID", List.of(
         FormField.choice("modality", "Select Participation Modality", EventModality.IN_PERSON,
-            // default value
             EventModality.class, EventModality::getLabel, List.of(EventModality.HYBRID))));
 
     fields.add(EventField.of("event", "Enter Event ID").withConditionalChildren(modalityCondition));
