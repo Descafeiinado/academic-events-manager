@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.SuperBuilder;
 
@@ -30,9 +31,12 @@ public abstract class Event {
   private EventModality modality;
   private EventCapacity capacity;
 
+  @Builder.Default
   private LocalDateTime createdAt = LocalDateTime.now();
 
+  @Builder.Default
   private List<String> inPersonParticipants = new ArrayList<>();
+  @Builder.Default
   private List<String> virtualParticipants = new ArrayList<>();
 
   public Event() {

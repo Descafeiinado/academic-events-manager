@@ -11,7 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class EventCapacity {
 
+  @Builder.Default
   public Long inPersonCapacity = 0L;
+  @Builder.Default
   public Long virtualCapacity = 0L;
 
 }
