@@ -18,10 +18,10 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class Lecture extends Event {
 
+  private static final PersonRepository personRepository = PersonRepository.INSTANCE;
+
   private String speaker;
   private String topic;
-
-  private PersonRepository personRepository = PersonRepository.INSTANCE;
 
   public Person getSpeakerPerson() {
     if (speaker == null || speaker.isBlank()) {

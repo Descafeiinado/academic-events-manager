@@ -5,6 +5,7 @@ import br.edu.ifba.aem.application.Application;
 import br.edu.ifba.aem.application.GlobalScope;
 import br.edu.ifba.aem.domain.entities.Event;
 import br.edu.ifba.aem.domain.entities.Person;
+import br.edu.ifba.aem.domain.models.DateRange;
 import br.edu.ifba.aem.ui.common.InteractionProvider;
 import br.edu.ifba.aem.ui.components.EventField;
 import br.edu.ifba.aem.ui.components.FieldType;
@@ -322,7 +323,7 @@ public abstract class FormPage extends Page {
 
     EnumSet<FieldType> typesNeedingStrValidation = EnumSet.of(
         FieldType.TEXT, FieldType.NUMBER, FieldType.CPF, FieldType.DATE, FieldType.DATETIME,
-        FieldType.PERSON
+        FieldType.PERSON, FieldType.DATERANGE
     );
 
     if (field instanceof EventField eventField) {
@@ -623,6 +624,7 @@ public abstract class FormPage extends Page {
       case DATE -> GlobalScope.DATE_FORMAT_STRING;
       case DATETIME -> GlobalScope.DATE_TIME_FORMAT_STRING;
       case CPF, PERSON -> "000.000.000-00";
+      case DATERANGE -> DateRange.DATE_RANGE_FORMAT;
       default -> "Valid " + fieldType.toString().toLowerCase();
     };
   }
@@ -644,6 +646,9 @@ public abstract class FormPage extends Page {
           .defaultValue(defaultValueStr).addPrompt();
       case DATETIME -> promptBuilder.createInputPrompt().name(field.getName())
           .message(message + " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "):")
+          .defaultValue(defaultValueStr).addPrompt();
+      case DATERANGE -> promptBuilder.createInputPrompt().name(field.getName())
+          .message(message + " (format: " + DateRange.DATE_RANGE_FORMAT + "):")
           .defaultValue(defaultValueStr).addPrompt();
       case CHOICE -> {
         var listPrompt = promptBuilder.createListPrompt()
@@ -881,6 +886,7 @@ public abstract class FormPage extends Page {
       case BOOLEAN -> " (yes/no): ";
       case DATE -> " (format: " + GlobalScope.DATE_FORMAT_STRING + "): ";
       case DATETIME -> " (format: " + GlobalScope.DATE_TIME_FORMAT_STRING + "): ";
+      case DATERANGE -> " (format: " + DateRange.DATE_RANGE_FORMAT + "): ";
       case CPF -> " (format: 000.000.000-00): ";
       default -> ": ";
     };
@@ -932,6 +938,8 @@ public abstract class FormPage extends Page {
           GlobalScope.DATE_FORMAT.format(ld);
       case LocalDateTime ldt when field.getFieldType() == FieldType.DATETIME ->
           GlobalScope.DATE_TIME_FORMAT.format(ldt);
+      case DateRange dr when field.getFieldType() == FieldType.DATERANGE ->
+          dr.toString();
       case Boolean b -> b.toString();
       default -> defVal.toString();
     };
@@ -949,6 +957,8 @@ public abstract class FormPage extends Page {
       case LocalDate ld when fieldType == FieldType.DATE -> GlobalScope.DATE_FORMAT.format(ld);
       case LocalDateTime ldt when fieldType == FieldType.DATETIME ->
           GlobalScope.DATE_TIME_FORMAT.format(ldt);
+      case DateRange dr when fieldType == FieldType.DATERANGE ->
+          dr.toString();
       case Enum<?> enumVal when fieldType == FieldType.CHOICE -> isJLineContext ? enumVal.name() :
           field.getOptions() != null ? field.getOptions()
               .getOrDefault(enumVal.name(), enumVal.toString()) : enumVal.toString();
@@ -1014,4 +1024,5 @@ public abstract class FormPage extends Page {
     header.add(new AttributedString(""));
     return header;
   }
+
 }

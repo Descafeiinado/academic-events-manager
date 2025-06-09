@@ -57,8 +57,6 @@ public abstract class NavigationPage extends Page {
       provider.clearScreen();
       provider.getWriter().println("Exiting application...");
       provider.getWriter().flush();
-
-      Application.finishGracefully();
     };
 
     String exitText = "Exit";

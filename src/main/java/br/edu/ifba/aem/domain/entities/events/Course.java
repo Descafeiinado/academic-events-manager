@@ -21,10 +21,10 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class Course extends Event implements ParticipationRestrictive {
 
+  private static final PersonRepository personRepository = PersonRepository.INSTANCE;
+
   private String instructor;
   private long duration; // Duration in hours
-
-  private PersonRepository personRepository = PersonRepository.INSTANCE;
 
   public Teacher getInstructorPerson() {
     if (instructor == null || instructor.isBlank()) {

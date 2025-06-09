@@ -2,6 +2,7 @@ package br.edu.ifba.aem.domain.entities;
 
 import br.edu.ifba.aem.domain.enums.PersonType;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
@@ -18,5 +19,7 @@ public abstract class Person {
   private String name;
   private LocalDate birthDate;
   private PersonType type;
+
+  private LocalDateTime createdAt = LocalDateTime.now();
 
 }

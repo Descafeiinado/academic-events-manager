@@ -1,6 +1,7 @@
 package br.edu.ifba.aem.ui.components;
 
 import br.edu.ifba.aem.application.GlobalScope;
+import br.edu.ifba.aem.domain.models.DateRange;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -14,6 +15,7 @@ import java.util.function.Predicate;
 import lombok.Getter;
 
 @Getter
+@SuppressWarnings("unused")
 public class FormField<T> {
 
   public static Function<String, String> DEFAULT_CPF_PARSER = cpf -> {
@@ -102,11 +104,8 @@ public class FormField<T> {
   }
 
   public static FormField<String> cpf(String name, String label, String defaultValue) {
-    return new FormField<>(name, label, defaultValue,
-        DEFAULT_CPF_PARSER,
-        DEFAULT_CPF_VALIDATOR,
-        FieldType.CPF, Collections.emptyMap(), Collections.emptyMap()
-    );
+    return new FormField<>(name, label, defaultValue, DEFAULT_CPF_PARSER, DEFAULT_CPF_VALIDATOR,
+        FieldType.CPF, Collections.emptyMap(), Collections.emptyMap());
   }
 
   public static <T> FormField<T> custom(String name, String label, T defaultValue,
@@ -116,37 +115,39 @@ public class FormField<T> {
   }
 
   public static FormField<LocalDate> date(String name, String label, LocalDate defaultValue) {
-    return new FormField<>(
-        name, label, defaultValue,
-        s -> LocalDate.parse(s, GlobalScope.DATE_FORMAT),
-        s -> {
-          try {
-            LocalDate.parse(s, GlobalScope.DATE_FORMAT);
-            return true;
-          } catch (DateTimeParseException exception) {
-            return false;
-          }
-        },
-        FieldType.DATE, Collections.emptyMap(), Collections.emptyMap()
-    );
+    return new FormField<>(name, label, defaultValue,
+        s -> LocalDate.parse(s, GlobalScope.DATE_FORMAT), s -> {
+      try {
+        LocalDate.parse(s, GlobalScope.DATE_FORMAT);
+        return true;
+      } catch (DateTimeParseException exception) {
+        return false;
+      }
+    }, FieldType.DATE, Collections.emptyMap(), Collections.emptyMap());
   }
 
   public static FormField<LocalDateTime> dateTime(String name, String label,
       LocalDateTime defaultValue) {
-    return new FormField<>(
-        name, label, defaultValue,
-        s -> LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT),
-        // Parser expects GlobalScope format
-        s -> { // Validator
-          try {
-            LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT);
-            return true;
-          } catch (DateTimeParseException exception) {
-            return false;
-          }
-        },
-        FieldType.DATETIME, Collections.emptyMap(), Collections.emptyMap()
-    );
+    return new FormField<>(name, label, defaultValue,
+        s -> LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT), s -> {
+      try {
+        LocalDateTime.parse(s, GlobalScope.DATE_TIME_FORMAT);
+        return true;
+      } catch (DateTimeParseException exception) {
+        return false;
+      }
+    }, FieldType.DATETIME, Collections.emptyMap(), Collections.emptyMap());
+  }
+
+  public static FormField<DateRange> dateRange(String name, String label, DateRange defaultValue) {
+    return new FormField<>(name, label, defaultValue, DateRange::parse, s -> {
+      try {
+        DateRange.parse(s);
+        return true;
+      } catch (DateTimeParseException exception) {
+        return false;
+      }
+    }, FieldType.DATERANGE, Collections.emptyMap(), Collections.emptyMap());
   }
 
   public static <E extends Enum<E>> FormField<E> choice(String name, String label, E defaultValue,
@@ -214,9 +215,9 @@ public class FormField<T> {
           "Invalid boolean string: " + s + ". Expected 'yes', 'no', 'true', or 'false'.");
     };
 
-    Predicate<String> validator = s -> "yes".equalsIgnoreCase(s) || "no".equalsIgnoreCase(s) ||
-        Boolean.TRUE.toString().equalsIgnoreCase(s) ||
-        Boolean.FALSE.toString().equalsIgnoreCase(s);
+    Predicate<String> validator = s -> "yes".equalsIgnoreCase(s) || "no".equalsIgnoreCase(s)
+        || Boolean.TRUE.toString().equalsIgnoreCase(s) || Boolean.FALSE.toString()
+        .equalsIgnoreCase(s);
 
     return new FormField<>(name, label, defaultValue, parser, validator, FieldType.BOOLEAN, opts,
         Collections.emptyMap());

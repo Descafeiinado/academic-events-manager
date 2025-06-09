@@ -21,15 +21,16 @@ public abstract class Event {
   private String title;
   private LocalDateTime date;
   private String place;
+  private String description;
 
   private EventType type;
   private EventModality modality;
   private EventCapacity capacity;
 
+  private LocalDateTime createdAt = LocalDateTime.now();
+
   private List<String> inPersonParticipants = new ArrayList<>();
   private List<String> virtualParticipants = new ArrayList<>();
-
-  private String description;
 
   public Event() {
     SEQUENTIAL_ID_PROVIDER.rollback();
