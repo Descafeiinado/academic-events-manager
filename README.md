@@ -8,7 +8,7 @@ A Java application for managing academic events.
 
 ## Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Unix-like OS (Linux/macOS) or Windows
 - Git (optional, for cloning)
 
