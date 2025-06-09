@@ -41,7 +41,7 @@ java -Dfile.encoding=UTF-8 -jar build/libs/academic-events-manager.jar
 > On Windows, use:
 >
 > ```bat
-> java -Dfile.encoding=UTF-8 -jar build\libs\academic-events-manager.jar
+> java "-Dfile.encoding=UTF-8" -jar build\libs\academic-events-manager.jar
 > ```
 
 ## Notes
