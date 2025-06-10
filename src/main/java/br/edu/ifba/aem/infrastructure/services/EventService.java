@@ -1,6 +1,7 @@
 package br.edu.ifba.aem.infrastructure.services;
 
 import br.edu.ifba.aem.domain.entities.Event;
+import br.edu.ifba.aem.domain.entities.Person;
 import br.edu.ifba.aem.domain.entities.events.Course;
 import br.edu.ifba.aem.domain.entities.events.Lecture;
 import br.edu.ifba.aem.domain.entities.personas.External;
@@ -33,14 +34,16 @@ public class EventService {
     }
 
     if (toCreate instanceof Lecture lecture) {
-      External speaker = (External) personRepository
+      Person speaker = personRepository
           .getById(lecture.getSpeaker())
           .orElseThrow(() -> new IllegalArgumentException(
               "Speaker with CPF " + lecture.getSpeaker() + " not found"));
 
-      speaker.getLecturesPresented().add(lecture.getId());
+      if (speaker instanceof External external) {
+        external.getLecturesPresented().add(lecture.getId());
 
-      personRepository.save(speaker.getCpf(), speaker);
+        personRepository.save(external.getCpf(), external);
+      }
     }
 
     saveEvent(toCreate);
